@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { SafeAreaView, View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import styles from './styles';
+import { useNavigation } from '@react-navigation/native';
 
 const apps = [
-  { id: '1', name: 'Calculadora de Hora', usage: 10 },
-  { id: '2', name: 'Temporizador de Almoço', usage: 5 },
+  { id: '1', name: 'Calculadora de Hora', usage: 10, screenTitle: "TimeCalculator" },
+  { id: '2', name: 'Temporizador de Almoço', usage: 5, screenTitle: "LunchBreakTimer" },
 ];
 
 const SORT_OPTIONS = {
@@ -13,6 +14,7 @@ const SORT_OPTIONS = {
 };
 
 export default function App() {
+  const navigation = useNavigation();
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState(SORT_OPTIONS.AZ);
 
@@ -26,11 +28,16 @@ export default function App() {
       }
     });
 
-  const renderAppItem = ({ item }) => (
-    <TouchableOpacity style={styles.appItem}>
+  const renderAppItem = ({ item }) => {
+    console.log(item)
+    return (<TouchableOpacity
+      style={styles.appItem}
+      onPress={() => navigation.navigate(item.screenTitle)} 
+    >
       <Text style={styles.appName}>{item.name}</Text>
-    </TouchableOpacity>
-  );
+    </TouchableOpacity>)
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>
