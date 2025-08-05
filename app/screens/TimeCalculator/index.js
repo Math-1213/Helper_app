@@ -3,7 +3,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function PlaceholderScreen({ route, navigation }) {
+export default function TimeCalculator({ route, navigation }) {
   const screenName = route?.name || 'Tela';
 
   return (

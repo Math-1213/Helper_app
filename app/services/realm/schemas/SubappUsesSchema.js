@@ -1,13 +1,12 @@
 import Realm from 'realm';
-export default class TimerHistory extends Realm.Object{
+export default class SubappUses extends Realm.Object{
     static schema = {
-        name: 'TimerHistory',
+        name: 'SubappUses',
         primaryKey: 'id',
         properties:{
             id: { type:'int', indexed:true },
-            startTime: 'date',
-            endTime: 'date',
-            
+            uniqueName: 'string',
+            uses: 'int'
         }
     };
 }

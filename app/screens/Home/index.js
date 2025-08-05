@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView, View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
-import styles from styles
+import styles from './styles';
 
 const apps = [
   { id: '1', name: 'Calculadora de Hora', usage: 10 },
@@ -56,7 +56,7 @@ export default function App() {
             setSort(sort === SORT_OPTIONS.AZ ? SORT_OPTIONS.MOST_USED : SORT_OPTIONS.AZ);
           }}
         >
-          <Text>{sort}</Text>
+          <Text style={styles.sortSelectorText}>{sort}</Text>
         </TouchableOpacity>
       </View>
 
