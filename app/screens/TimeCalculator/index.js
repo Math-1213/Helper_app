@@ -1,16 +1,32 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Slider from '@react-native-community/slider';
 import styles from './styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import TimeDisplay from '../../components/TimeDisplay';
+
+// Converte minutos para objeto { hh, mm, ss }
+function minutesToTimeObj(totalMinutes) {
+  const hh = Math.floor(totalMinutes / 60);
+  const mm = totalMinutes % 60;
+  const ss = 0;
+  return { hh, mm, ss, ms: 0 };
+}
+
+// Converte objeto { hh, mm, ss } para minutos totais
+function timeObjToMinutes(time) {
+  return time.hh * 60 + time.mm + Math.floor(time.ss / 60);
+}
+
 export default function TimeCalculator() {
-  const [time1, setTime1] = useState(0); // em minutos
-  const [time2, setTime2] = useState(0); // em minutos
-  const [mode, setMode] = useState('add'); // ou 'subtract'
+  const [time1, setTime1] = useState({ hh: 0, mm: 0, ss: 0, ms: 0 });
+  const [time2, setTime2] = useState({ hh: 0, mm: 0, ss: 0, ms: 0 });
+  const [mode, setMode] = useState('add');
 
   const result = useMemo(() => {
-    const total = mode === 'add' ? time1 + time2 : time1 - time2;
+    const t1 = timeObjToMinutes(time1);
+    const t2 = timeObjToMinutes(time2);
+    const total = mode === 'add' ? t1 + t2 : t1 - t2;
     return total;
   }, [time1, time2, mode]);
 
@@ -25,29 +41,29 @@ export default function TimeCalculator() {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Calculadora de Hora</Text>
 
-      {/* Primeiro tempo */}
+      {/* Tempo 1 */}
       <View style={styles.sliderBlock}>
-        <Text style={styles.label}>Tempo 1: {formatTime(time1)}</Text>
-        <Slider
-          minimumValue={0}
-          maximumValue={600}
-          step={5}
+        <Text style={styles.label}>Tempo 1: {formatTime(timeObjToMinutes(time1))}</Text>
+        <TimeDisplay
+          editable={true}
           value={time1}
-          onValueChange={setTime1}
-          style={styles.slider}
+          showMilliseconds={false}
+          showSeconds={false}
+          onChange={setTime1}
+          style={{ marginVertical: 12 }}
         />
       </View>
 
-      {/* Segundo tempo */}
+      {/* Tempo 2 */}
       <View style={styles.sliderBlock}>
-        <Text style={styles.label}>Tempo 2: {formatTime(time2)}</Text>
-        <Slider
-          minimumValue={0}
-          maximumValue={600}
-          step={5}
+        <Text style={styles.label}>Tempo 2: {formatTime(timeObjToMinutes(time2))}</Text>
+        <TimeDisplay
+          editable={true}
           value={time2}
-          onValueChange={setTime2}
-          style={styles.slider}
+          showMilliseconds={false}
+          showSeconds={false}
+          onChange={setTime2}
+          style={{ marginVertical: 12 }}
         />
       </View>
 
