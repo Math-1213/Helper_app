@@ -12,11 +12,11 @@ const TimeDisplay = ({
 }) => {
   const [currentValue, setCurrentValue] = useState(value);
 
-  // Define as unidades a exibir
   const TIME_UNITS = ['hh', 'mm'];
   if (showSeconds) TIME_UNITS.push('ss');
   if (showMilliseconds) TIME_UNITS.push('ms');
 
+  // Referências para scroll
   const scrollRefs = {
     hh: useRef(null),
     mm: useRef(null),
@@ -24,12 +24,22 @@ const TimeDisplay = ({
     ms: useRef(null),
   };
 
-  const unitRanges = {
+  // Valores base de cada unidade
+  const baseRanges = {
     hh: Array.from({ length: 24 }, (_, i) => i),
     mm: Array.from({ length: 60 }, (_, i) => i),
     ss: Array.from({ length: 60 }, (_, i) => i),
     ms: Array.from({ length: 10 }, (_, i) => i * 100),
   };
+
+  // Construir arrays triplicados para efeito loop-around
+  const extendedRanges = {};
+  Object.entries(baseRanges).forEach(([unit, arr]) => {
+    extendedRanges[unit] = [...arr, ...arr, ...arr];
+  });
+
+  const ITEM_HEIGHT = 40;
+  const TRIPLE_LENGTH = (unit) => baseRanges[unit].length * 3;
 
   const updateValue = (unit, val) => {
     const updated = { ...currentValue, [unit]: val };
@@ -37,41 +47,73 @@ const TimeDisplay = ({
     onChange(updated);
   };
 
+  // Centraliza o scroll no "bloco do meio" do array triplicado
+  const centerScroll = (unit, idx) => {
+    if (scrollRefs[unit].current) {
+      // índice real dentro do bloco do meio
+      const baseLen = baseRanges[unit].length;
+      const centerIdx = baseLen + idx; 
+      scrollRefs[unit].current.scrollTo({ y: centerIdx * ITEM_HEIGHT, animated: false });
+    }
+  };
+
+  // Na montagem ou editable mudando, centraliza o scroll
   useEffect(() => {
     if (editable) {
       TIME_UNITS.forEach((unit) => {
-        const ref = scrollRefs[unit];
-        const idx = unitRanges[unit].indexOf(currentValue[unit]);
-        if (ref.current && idx >= 0) {
-          ref.current.scrollTo({ y: idx * 40, animated: false });
-        }
+        const baseLen = baseRanges[unit].length;
+        const idx = baseRanges[unit].indexOf(currentValue[unit]);
+        if (idx >= 0) centerScroll(unit, idx);
       });
     }
   }, [editable]);
+
+  // Detecta scroll e corrige para efeito loop-around
+  const handleScroll = (unit) => ({ nativeEvent }) => {
+    const y = nativeEvent.contentOffset.y;
+    const baseLen = baseRanges[unit].length;
+    const totalLen = baseLen * 3;
+    const maxOffset = (totalLen - 1) * ITEM_HEIGHT;
+    
+    let idx = Math.round(y / ITEM_HEIGHT);
+
+    // Corrige o índice para dentro do range base
+    let baseIdx = idx % baseLen;
+    if (baseIdx < 0) baseIdx += baseLen;
+
+    updateValue(unit, baseRanges[unit][baseIdx]);
+
+    // Se scroll passou da faixa do bloco do meio, reposiciona no meio
+    if (y < baseLen * ITEM_HEIGHT || y > (baseLen * 2) * ITEM_HEIGHT) {
+      centerScroll(unit, baseIdx);
+    }
+  };
 
   const renderPicker = (unit) => (
     <ScrollView
       key={unit}
       ref={scrollRefs[unit]}
       style={styles.scroll}
-      snapToInterval={40}
+      snapToInterval={ITEM_HEIGHT}
       decelerationRate="fast"
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
-      onScroll={({ nativeEvent }) => {
-        const index = Math.round(nativeEvent.contentOffset.y / 40);
-        updateValue(unit, unitRanges[unit][index]);
-      }}
+      onScroll={handleScroll(unit)}
       scrollEventThrottle={16}
     >
-      {unitRanges[unit].map((num, idx) => {
-        const displayVal = String(num).padStart(2, '0');
-        const valIdx = unitRanges[unit].indexOf(currentValue[unit]);
-        const distance = Math.abs(valIdx - idx);
+      {extendedRanges[unit].map((num, idx) => {
+        // O número base correto para exibir, independente do loop-around
+        const baseLen = baseRanges[unit].length;
+        const displayVal = String(baseRanges[unit][idx % baseLen]).padStart(2, '0');
+
+        // Opacidade para foco (centralizado)
+        const valIdx = baseRanges[unit].indexOf(currentValue[unit]);
+        const centerIdx = baseLen + valIdx;
+        const distance = Math.abs(centerIdx - idx);
         const opacity = distance === 0 ? 1 : distance === 1 ? 0.5 : 0.2;
 
         return (
-          <View key={num} style={styles.pickerItem}>
+          <View key={idx} style={styles.pickerItem}>
             <Text style={[styles.pickerText, { opacity }]}>{displayVal}</Text>
           </View>
         );

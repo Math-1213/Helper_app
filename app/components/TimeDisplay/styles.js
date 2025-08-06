@@ -4,10 +4,14 @@ export default StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#121212', // fundo escuro
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   scroll: {
-    width: 50,
-    height: 120,
+    width: 60,
+    height: 140,
   },
   scrollContent: {
     paddingVertical: 40,
@@ -18,27 +22,32 @@ export default StyleSheet.create({
     alignItems: 'center',
   },
   pickerText: {
-    fontSize: 24,
-    color: '#AAA',
+    fontSize: 26,
+    color: '#666', // cinza escuro para valores acima/abaixo
   },
   displayItem: {
-    width: 50,
+    width: 60,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   displayText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#000',
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#fff', // branco para valor selecionado
+    textShadowColor: '#0008',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   separator: {
-    color: '#AAA',
-    fontSize: 28,
+    color: '#888',
+    fontSize: 32,
     fontWeight: 'bold',
-    marginHorizontal: 4,
+    marginHorizontal: 6,
   },
   dot: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
-    marginHorizontal: 2,
+    marginHorizontal: 3,
+    color: '#888',
   },
 });
