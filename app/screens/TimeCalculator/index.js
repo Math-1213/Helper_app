@@ -30,20 +30,12 @@ export default function TimeCalculator() {
     return total;
   }, [time1, time2, mode]);
 
-  const formatTime = (totalMinutes) => {
-    const h = Math.floor(Math.abs(totalMinutes) / 60);
-    const m = Math.abs(totalMinutes) % 60;
-    const sign = totalMinutes < 0 ? '-' : '';
-    return `${sign}${h}h ${m}min`;
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Calculadora de Hora</Text>
 
       {/* Tempo 1 */}
-      <View style={styles.sliderBlock}>
-        <Text style={styles.label}>Tempo 1: {formatTime(timeObjToMinutes(time1))}</Text>
+      <View style={styles.timeBox}>
         <TimeDisplay
           editable={true}
           value={time1}
@@ -55,8 +47,7 @@ export default function TimeCalculator() {
       </View>
 
       {/* Tempo 2 */}
-      <View style={styles.sliderBlock}>
-        <Text style={styles.label}>Tempo 2: {formatTime(timeObjToMinutes(time2))}</Text>
+      <View style={styles.timeBox}>
         <TimeDisplay
           editable={true}
           value={time2}
@@ -83,10 +74,16 @@ export default function TimeCalculator() {
         </TouchableOpacity>
       </View>
 
-      {/* Resultado */}
-      <View style={styles.resultBlock}>
+      {/* Resultado com TimeDisplay */}
+      <View style={[styles.timeBox, { alignItems: 'center', marginTop: 16 }]}>
         <Text style={styles.resultLabel}>Resultado:</Text>
-        <Text style={styles.result}>{formatTime(result)}</Text>
+        <TimeDisplay
+          editable={false}
+          value={minutesToTimeObj(result)}
+          showMilliseconds={false}
+          showSeconds={false}
+          style={{ marginTop: 8 }}
+        />
       </View>
     </SafeAreaView>
   );

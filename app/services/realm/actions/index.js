@@ -1,9 +1,7 @@
-import { TimerHistory } from './TimerHistory';
+import { lunchBreakTimeHistory } from './lunchBreakTimeHistory';
 
-// Funções de acesso ao realm (queries, salvar, update)
-// Onde se encontram todas as funções para acesso ao banco local
 const RealmActions = {
-  TimerHistory
+  lunchBreakTimeHistory
 };
 
 export default RealmActions;

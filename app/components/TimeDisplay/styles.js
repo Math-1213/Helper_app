@@ -23,20 +23,19 @@ export default StyleSheet.create({
   },
   pickerText: {
     fontSize: 26,
-    color: '#666', // cinza escuro para valores acima/abaixo
+    color: '#666',
   },
   displayItem: {
-    width: 60,
+    width: 60, 
     alignItems: 'center',
-    justifyContent: 'center',
   },
   displayText: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#fff', // branco para valor selecionado
-    textShadowColor: '#0008',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#777',
+    textAlign: 'center',
+    width: '100%',
+    flexWrap: 'nowrap', 
   },
   separator: {
     color: '#888',
@@ -50,4 +49,26 @@ export default StyleSheet.create({
     marginHorizontal: 3,
     color: '#888',
   },
+  signToggle: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 40,
+    marginRight: 8,
+  },
+  signToggleText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#AAA',
+  },
+  signSpace: {
+    width: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+  },
+  signText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+
 });
