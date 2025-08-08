@@ -5,7 +5,7 @@ import styles from './styles';
 import HistoryModal from './HistoryModal';
 import { LunchBreakTimeHistoryActions } from '../../services/database/actions/LunchBreakTimeHistory.actions'
 
-const predefinedDurations = [1, 30, 45, 60]; // Só 0h30, 0h45 e 1h
+const predefinedDurations = [0.2, 30, 45, 60]; // Só 0h30, 0h45 e 1h
 
 const dateToTimeValue = (date) => {
   return {
@@ -40,7 +40,7 @@ export default function LunchBreakerScreen({ navigation }) {
   };
 
   const handleStart = async () => {
-    
+
     try {
       if (!(startTime instanceof Date) || isNaN(startTime.getTime())) {
         alert('Data/hora inválida');

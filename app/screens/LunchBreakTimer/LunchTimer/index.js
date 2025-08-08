@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import BackgroundTimer from 'react-native-background-timer';
 import { Notifications } from 'react-native-notifications';
-// import ProgressBar from 'react-native-progress/Bar';
+import ProgressBar from 'react-native-progress/Bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LunchBreakTimeHistoryActions } from '../../../services/database/actions/LunchBreakTimeHistory.actions'
 import styles from './styles';
@@ -34,13 +34,14 @@ export default function LunchTimer() {
   };
 
   const stopTimer = async () => {
+    console.log('Stop button pressed')
     if (intervalRef.current) BackgroundTimer.clearInterval(intervalRef.current);
 
     const stoppedAt = new Date();
     const payload = {
-      id: id,
+      id,
       startTime: start,
-      stoppedAt: stop,
+      stoppedAt,
       durationMinutes: Math.round((stoppedAt - start) / 60000),
     };
     console.log(payload)
@@ -49,6 +50,7 @@ export default function LunchTimer() {
       await LunchBreakTimeHistoryActions.stopTimerBefore(payload)
     } catch (err) {
       console.error('Erro ao salvar info:', err, payload);
+      Alert.alert('Erro', 'Não foi possível encerrar o timer corretamente.');
     }
 
     notify('Timer encerrado manualmente.');
@@ -81,14 +83,14 @@ export default function LunchTimer() {
       <Text style={styles.title}>Tempo Restante</Text>
       <Text style={styles.timerText}>{formatTime(remainingSeconds)}</Text>
 
-      {/* <ProgressBar
+      <ProgressBar
         progress={progress}
         width={null}
         height={12}
         color="#4CAF50"
         borderRadius={8}
         style={styles.progress}
-      /> */}
+      />
 
       <TouchableOpacity style={styles.stopButton} onPress={stopTimer}>
         <Text style={styles.stopButtonText}>Encerrar Agora</Text>

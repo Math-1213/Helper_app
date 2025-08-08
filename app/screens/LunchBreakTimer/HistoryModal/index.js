@@ -5,13 +5,26 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { lunchBreakTimeHistory } from '../../services/realm/actions/lunchBreakTimeHistory';
+import { LunchBreakTimeHistoryActions } from '../../../services/database/actions/LunchBreakTimeHistory.actions'
 import styles from './styles';
+
+const getWeekDays = (date) => {
+  const day = date.getDay();
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1)); 
+
+  let weekDays = [];
+  for (let i = 0; i < 5; i++) { 
+    let d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    weekDays.push(d);
+  }
+  return weekDays;
+};
 
 const formatDate = (date) => {
   const d = date.getDate().toString().padStart(2, '0');
@@ -20,23 +33,15 @@ const formatDate = (date) => {
   return `${d}/${m}/${y}`;
 };
 
-const getWeekDay = (date) => {
-  const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  return days[date.getDay()];
+const formatTime = (isoString) => {
+  if (!isoString) return '--:--';
+  const d = new Date(isoString);
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 };
 
-const getWeekDays = (date) => {
-  const day = date.getDay();
-  const monday = new Date(date);
-  monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
-
-  let weekDays = [];
-  for (let i = 0; i < 5; i++) {
-    let d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    weekDays.push(d);
-  }
-  return weekDays;
+const getWeekDayShort = (date) => {
+  const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  return days[date.getDay()];
 };
 
 export default function LunchBreakHistoryModal({ visible, onClose }) {
@@ -54,56 +59,42 @@ export default function LunchBreakHistoryModal({ visible, onClose }) {
   }, [weekDays]);
 
   const loadHistory = async () => {
-    // try {
-    //   const realmResults = await lunchBreakTimeHistory.index();
-    //   const allData = [...realmResults];
-    //   const data = allData.filter((item) => {
-    //     const dt = new Date(item.year, item.month - 1, item.day);
-    //     return weekDays.some(
-    //       (wd) =>
-    //         wd.getDate() === dt.getDate() &&
-    //         wd.getMonth() === dt.getMonth() &&
-    //         wd.getFullYear() === dt.getFullYear()
-    //     );
-    //   });
-    //   setHistory(data);
-    // } catch (err) {
-    //   console.error('Erro ao carregar histórico:', err);
-    // }
+    try {
+      const allData = await LunchBreakTimeHistoryActions.getAll();
+
+      // Filtra os registros da semana selecionada (segunda a sexta)
+      const filtered = allData.filter((item) => {
+        const itemDate = new Date(item.date);
+        return weekDays.some((wd) =>
+          wd.getDate() === itemDate.getDate() &&
+          wd.getMonth() === itemDate.getMonth() &&
+          wd.getFullYear() === itemDate.getFullYear()
+        );
+      });
+
+      setHistory(filtered);
+    } catch (err) {
+      console.error('Erro ao carregar histórico:', err);
+    }
   };
 
-  const openDatePicker = () => {
-    setShowPicker(true);
-  };
+  const openDatePicker = () => setShowPicker(true);
 
   const onDateChange = (event, date) => {
     if (Platform.OS === 'android') setShowPicker(false);
     if (date) setSelectedDate(date);
   };
 
-  const renderItem = ({ item }) => {
-    const { day, month, year, weekDay, startTime, returnTime } = item;
-
-    const formatTime = (date) => {
-      if (!date) return '--:--';
-      const d = new Date(date);
-      return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes()
-        .toString()
-        .padStart(2, '0')}`;
-    };
-
-    return (
-      <View style={styles.item}>
-        <Text style={styles.dateText}>
-          {String(day).padStart(2, '0')}/{String(month).padStart(2, '0')}/{year.toString().slice(-2)}
-        </Text>
-        <Text style={styles.weekDayText}>{weekDay}</Text>
-        <Text style={styles.timeText}>
-          Saída: {formatTime(startTime)} | Volta: {formatTime(returnTime)}
-        </Text>
-      </View>
-    );
-  };
+  const renderItem = ({ item }) => (
+    <View style={styles.item}>
+      <Text style={styles.dateText}>{formatDate(new Date(item.date))}</Text>
+      <Text style={styles.weekDayText}>{item.weekday || getWeekDayShort(new Date(item.date))}</Text>
+      <Text style={styles.timeText}>
+        Saída: {formatTime(item.startTime)} | Volta: {formatTime(item.endTime)}
+      </Text>
+      <Text style={styles.durationText}>Duração: {item.durationMinutes} min</Text>
+    </View>
+  );
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>

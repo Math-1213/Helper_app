@@ -39,4 +39,14 @@ export default StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  stopButton: {
+    backgroundColor: '#f44336',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginTop: 20,
+    borderWidth: 2,
+    borderColor: 'yellow',
+  },
 });
