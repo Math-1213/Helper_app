@@ -3,15 +3,18 @@ import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import TimeDisplay from '../../components/TimeDisplay';
 import styles from './styles';
 import HistoryModal from './HistoryModal';
+import { LunchBreakTimeHistoryActions } from '../../services/database/actions/LunchBreakTimeHistory.actions'
 
-const predefinedDurations = [30, 45, 60]; // Só 0h30, 0h45 e 1h
+const predefinedDurations = [1, 30, 45, 60]; // Só 0h30, 0h45 e 1h
 
-const dateToTimeValue = (date) => ({
-  hh: date.getHours(),
-  mm: date.getMinutes(),
-  ss: date.getSeconds(),
-  ms: 0,
-});
+const dateToTimeValue = (date) => {
+  return {
+    hh: date.getHours(),
+    mm: date.getMinutes(),
+    ss: date.getSeconds(),
+    ms: 0,
+  }
+}
 
 const timeValueToDate = (timeValue) => {
   const now = new Date();
@@ -23,12 +26,10 @@ const timeValueToDate = (timeValue) => {
 };
 
 export default function LunchBreakerScreen({ navigation }) {
-  // Horário padrão: 12:00
   const defaultStartTime = new Date();
-  defaultStartTime.setHours(12, 0, 0, 0);
 
   const [startTime, setStartTime] = useState(defaultStartTime);
-  const [duration, setDuration] = useState(60); // 1 hora padrão
+  const [duration, setDuration] = useState(60); 
   const [showHistory, setShowHistory] = useState(false);
 
   const startTimeValue = dateToTimeValue(startTime);
@@ -38,28 +39,35 @@ export default function LunchBreakerScreen({ navigation }) {
     setStartTime(newDate);
   };
 
-  const handleStart = () => {
-    if (!(startTime instanceof Date) || isNaN(startTime.getTime())) {
-      alert('Data/hora inválida');
-      return;
-    }
-
-    const endTime = new Date(startTime.getTime() + duration * 60000);
-
-    // // Realm (quando ativar):
-    lunchBreakTimeHistory.store({
-      date: new Date(startTime),
-      weekday: startTime.toLocaleDateString('pt-BR', { weekday: 'long' }),
-      startTime,
-      endTime,
-      durationMinutes: duration,
-    });
+  const handleStart = async () => {
     
-    navigation.navigate('LunchTimer', {
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString(),
-      duration,
-    });
+    try {
+      if (!(startTime instanceof Date) || isNaN(startTime.getTime())) {
+        alert('Data/hora inválida');
+        return;
+      }
+      const endTime = new Date(startTime.getTime() + duration * 60000)
+      const payload = {
+        date: startTime,
+        weekday: startTime.toLocaleDateString('pt-BR', { weekday: 'long' }),
+        startTime,
+        endTime,
+        durationMinutes: duration,
+      }
+
+      const id = await LunchBreakTimeHistoryActions.insert(payload);
+
+      navigation.navigate('LunchTimer', {
+        id,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        duration,
+      });
+
+    } catch (err) {
+      console.error('Erro ao iniciar o timer:', err);
+      alert('Não foi possível iniciar o timer. Tente novamente.');
+    }
   };
 
   return (
