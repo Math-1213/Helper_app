@@ -1,6 +1,5 @@
 import { getDB } from '../';
 
-// Inserir matéria e notas
 export const SubjectsActions =
 {
     insert: async ({ name, grades }) => {
@@ -25,8 +24,6 @@ export const SubjectsActions =
             });
         });
     },
-
-    // Listar todas as matérias com suas notas
     getAll: async () => {
         const db = await getDB();
         return new Promise((resolve, reject) => {
@@ -64,8 +61,6 @@ export const SubjectsActions =
             });
         });
     },
-
-    // Atualizar matéria e suas notas
     update: async ({ id, name, grades }) => {
         const db = await getDB();
         return new Promise((resolve, reject) => {
@@ -75,13 +70,11 @@ export const SubjectsActions =
                     [name, id]
                 );
 
-                // Remover notas antigas
                 tx.executeSql(
                     `DELETE FROM grades WHERE subject_id = ?;`,
                     [id]
                 );
 
-                // Inserir notas atualizadas
                 grades.forEach(({ name, weight, score }) => {
                     tx.executeSql(
                         `INSERT INTO grades (subject_id, name, weight, score) VALUES (?, ?, ?, ?);`,
@@ -95,8 +88,6 @@ export const SubjectsActions =
             );
         });
     },
-
-    // Deletar matéria (as notas são removidas por cascade)
     remove: async (id) => {
         const db = await getDB();
         return new Promise((resolve, reject) => {

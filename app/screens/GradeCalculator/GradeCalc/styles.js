@@ -1,8 +1,11 @@
-import {StyleSheet } from 'react-native';
-export default  styles = StyleSheet.create({
+// styles.js
+import { StyleSheet } from 'react-native';
+
+export default StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#121212',
+    flex: 1,
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -13,15 +16,15 @@ export default  styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: '#4da3ff',
     borderRadius: 8,
     marginHorizontal: 8,
   },
   toggleActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4da3ff',
   },
   toggleText: {
-    color: '#007AFF',
+    color: '#4da3ff',
     fontWeight: '600',
   },
   toggleTextActive: {
@@ -31,9 +34,13 @@ export default  styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#333',
     paddingBottom: 6,
     marginBottom: 6,
+  },
+  headerText: {
+    color: '#ddd',
+    fontWeight: '700',
   },
   tableRow: {
     flexDirection: 'row',
@@ -60,10 +67,12 @@ export default  styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#bbb',
+    borderColor: '#555',
     borderRadius: 4,
     height: 36,
     paddingHorizontal: 8,
+    color: '#fff',
+    backgroundColor: '#1e1e1e',
   },
   removeButton: {
     justifyContent: 'center',
@@ -89,13 +98,15 @@ export default  styles = StyleSheet.create({
   averageLabel: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#ccc',
   },
   averageValue: {
     fontSize: 16,
     fontWeight: '700',
+    color: '#fff',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4da3ff',
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { SubjectActions } from '../../services/database/actions/Subject.actions'; // Ajuste pro seu caminho real
+import { SubjectsActions } from '../../../services/database/actions/Subjects.actions'; // Import corrigido
 import styles from './styles';
 
 export default function SubjectsList() {
@@ -10,7 +10,6 @@ export default function SubjectsList() {
 
   const [subjects, setSubjects] = useState([]);
 
-  // Carrega matérias sempre que a tela ficar focada
   useEffect(() => {
     if (isFocused) {
       loadSubjects();
@@ -19,7 +18,7 @@ export default function SubjectsList() {
 
   const loadSubjects = async () => {
     try {
-      const list = await SubjectActions.getAll(); // Função que retorna lista de matérias
+      const list = await SubjectsActions.getAll();
       setSubjects(list);
     } catch (error) {
       console.error('Erro ao carregar matérias:', error);
@@ -28,7 +27,7 @@ export default function SubjectsList() {
 
   const handleEdit = (subject) => {
     navigation.navigate('GradeCalcScreen', {
-      gradesData: subject.grades, // ou o formato que você salvar as notas
+      gradesData: subject.grades,
       subjectId: subject.id,
     });
   };
@@ -44,8 +43,8 @@ export default function SubjectsList() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await SubjectActions.delete(subject.id);
-              loadSubjects(); // Recarrega lista após exclusão
+              await SubjectsActions.delete(subject.id);
+              loadSubjects();
             } catch (err) {
               console.error('Erro ao excluir matéria:', err);
             }
@@ -78,5 +77,3 @@ export default function SubjectsList() {
     </View>
   );
 }
-
-

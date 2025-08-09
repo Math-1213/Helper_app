@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import GradeCalc from '../../components/GradeCalc'; // Ajuste o caminho conforme seu projeto
-import { SubjectActions } from '../../services/database/actions/Subject.actions';
+import GradeCalc from '../GradeCalc'; 
+import { SubjectsActions } from '../../services/database/actions/Subject.actions';
 import styles from './styles';
 
 export default function GradeCalcEditScreen() {
@@ -38,7 +38,7 @@ export default function GradeCalcEditScreen() {
         grades, // array de { name, weight, score }
       };
 
-      await SubjectActions.update(payload); // Função que atualiza matéria no SQLite
+      await SubjectsActions.update(payload); // Função que atualiza matéria no SQLite
 
       Alert.alert('Sucesso', 'Matéria atualizada com sucesso!', [
         {

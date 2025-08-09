@@ -12,8 +12,10 @@ export async function getDB() {
 
     // Tabelas
     await dbInstance.executeSql(LunchBreakTimeHistorySchema.create);
+
     await dbInstance.executeSql(SubjectsSchema.createSubjects);
     await dbInstance.executeSql(SubjectsSchema.createGrades);
+    
     return dbInstance;
 }
 

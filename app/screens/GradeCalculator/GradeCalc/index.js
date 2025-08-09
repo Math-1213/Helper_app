@@ -1,3 +1,4 @@
+// GradeCalc.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import styles from './styles';
@@ -6,13 +7,11 @@ const defaultRow = { id: Date.now().toString(), name: '', weight: '', grade: '' 
 
 export default function GradeCalc({ onSave }) {
     const [rows, setRows] = useState([defaultRow]);
-    const [modeWeighted, setModeWeighted] = useState(true); // true: weighted average; false: sum
+    const [modeWeighted, setModeWeighted] = useState(true);
     const [average, setAverage] = useState(0);
 
-    // Atualiza média sempre que rows ou modo mudam
     useEffect(() => {
         if (modeWeighted) {
-            // Weighted average = sum(grade * weight) / sum(weight)
             let totalWeight = 0;
             let total = 0;
             rows.forEach(({ weight, grade }) => {
@@ -25,7 +24,6 @@ export default function GradeCalc({ onSave }) {
             });
             setAverage(totalWeight > 0 ? total / totalWeight : 0);
         } else {
-            // Sum values = sum(grade)
             let total = 0;
             rows.forEach(({ grade }) => {
                 const g = parseFloat(grade);
@@ -69,9 +67,9 @@ export default function GradeCalc({ onSave }) {
 
             {/* Table Header */}
             <View style={styles.tableHeader}>
-                <Text style={[styles.cell, styles.nameCol]}>Name</Text>
-                <Text style={[styles.cell, styles.weightCol]}>Weight</Text>
-                <Text style={[styles.cell, styles.gradeCol]}>Grade</Text>
+                <Text style={[styles.cell, styles.nameCol, styles.headerText]}>Name</Text>
+                <Text style={[styles.cell, styles.weightCol, styles.headerText]}>Weight</Text>
+                <Text style={[styles.cell, styles.gradeCol, styles.headerText]}>Grade</Text>
                 <Text style={[styles.cell, styles.removeCol]}></Text>
             </View>
 
@@ -83,6 +81,7 @@ export default function GradeCalc({ onSave }) {
                     <View style={styles.tableRow}>
                         <TextInput
                             placeholder="Name"
+                            placeholderTextColor="#aaa"
                             style={[styles.cell, styles.nameCol, styles.input]}
                             value={item.name}
                             onChangeText={text => updateRow(item.id, 'name', text)}
@@ -90,14 +89,16 @@ export default function GradeCalc({ onSave }) {
                         />
                         <TextInput
                             placeholder="Weight"
+                            placeholderTextColor="#aaa"
                             style={[styles.cell, styles.weightCol, styles.input]}
                             keyboardType="numeric"
                             value={item.weight}
                             onChangeText={text => updateRow(item.id, 'weight', text)}
-                            editable={modeWeighted} // só editável se for weighted mode
+                            editable={modeWeighted}
                         />
                         <TextInput
                             placeholder="Grade"
+                            placeholderTextColor="#aaa"
                             style={[styles.cell, styles.gradeCol, styles.input]}
                             keyboardType="numeric"
                             value={item.grade}
@@ -107,7 +108,7 @@ export default function GradeCalc({ onSave }) {
                             style={[styles.cell, styles.removeCol, styles.removeButton]}
                             onPress={() => removeRow(item.id)}
                         >
-                            <Text style={{ color: 'red' }}>X</Text>
+                            <Text style={{ color: '#ff6b6b' }}>X</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -132,4 +133,3 @@ export default function GradeCalc({ onSave }) {
         </View>
     );
 }
-
