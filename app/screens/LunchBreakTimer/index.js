@@ -29,7 +29,7 @@ export default function LunchBreakerScreen({ navigation }) {
   const defaultStartTime = new Date();
 
   const [startTime, setStartTime] = useState(defaultStartTime);
-  const [duration, setDuration] = useState(60); 
+  const [duration, setDuration] = useState(60);
   const [showHistory, setShowHistory] = useState(false);
 
   const startTimeValue = dateToTimeValue(startTime);
@@ -124,18 +124,9 @@ export default function LunchBreakerScreen({ navigation }) {
         <Text style={styles.historyButtonText}>Ver Horários Anteriores</Text>
       </TouchableOpacity>
 
-      <Modal
-        visible={showHistory}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowHistory(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <HistoryModal onClose={() => setShowHistory(false)} />
-          </View>
-        </View>
-      </Modal>
+      {showHistory && (
+        <HistoryModal visible={showHistory} onClose={() => setShowHistory(false)} />
+      )}
 
 
     </View>
