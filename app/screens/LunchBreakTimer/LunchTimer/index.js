@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, } from 'react-native';
 import BackgroundTimer from 'react-native-background-timer';
 import { Notifications } from 'react-native-notifications';
 import ProgressBar from 'react-native-progress/Bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { LunchBreakTimeHistoryActions } from '../../../services/database/actions/LunchBreakTimeHistory.actions'
+import { LunchBreakTimeHistoryActions } from '../../../services/database/actions/LunchBreakTimeHistory.actions';
 import styles from './styles';
 
 export default function LunchTimer() {
@@ -17,7 +17,6 @@ export default function LunchTimer() {
   const totalSeconds = (end.getTime() - start.getTime()) / 1000;
 
   const [remainingSeconds, setRemainingSeconds] = useState(totalSeconds);
-
   const intervalRef = useRef(null);
 
   const formatTime = (sec) => {
@@ -30,11 +29,11 @@ export default function LunchTimer() {
     Notifications.postLocalNotification({
       title: 'Almoço',
       body: message,
+      extra: { screen: 'LunchTimer', id, startTime, endTime, duration },
     });
   };
 
   const stopTimer = async () => {
-    console.log('Stop button pressed')
     if (intervalRef.current) BackgroundTimer.clearInterval(intervalRef.current);
 
     const stoppedAt = new Date();
@@ -44,10 +43,9 @@ export default function LunchTimer() {
       stoppedAt,
       durationMinutes: Math.round((stoppedAt - start) / 60000),
     };
-    console.log(payload)
 
     try {
-      await LunchBreakTimeHistoryActions.stopTimerBefore(payload)
+      await LunchBreakTimeHistoryActions.stopTimerBefore(payload);
     } catch (err) {
       console.error('Erro ao salvar info:', err, payload);
       Alert.alert('Erro', 'Não foi possível encerrar o timer corretamente.');
@@ -57,6 +55,20 @@ export default function LunchTimer() {
     navigation.goBack();
   };
 
+  function handleEndTimer() {
+    Alert.alert(
+      'Tempo encerrado',
+      'Seu tempo de almoço acabou.',
+      [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ],
+      { cancelable: false }
+    );
+  }
+
   useEffect(() => {
     notify(`Almoço iniciado! Retorno às ${end.toLocaleTimeString().slice(0, 5)}`);
 
@@ -65,6 +77,7 @@ export default function LunchTimer() {
         if (prev <= 1) {
           BackgroundTimer.clearInterval(intervalRef.current);
           notify('Tempo de almoço encerrado!');
+          handleEndTimer();
           return 0;
         }
         return prev - 1;
@@ -73,6 +86,17 @@ export default function LunchTimer() {
 
     return () => {
       if (intervalRef.current) BackgroundTimer.clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onNotificationOpened = Notifications.events().registerNotificationOpened((notification, completion) => {
+      navigation.navigate('LunchTimer', { id, startTime, endTime, duration });
+      completion();
+    });
+
+    return () => {
+      onNotificationOpened.remove();
     };
   }, []);
 

@@ -18,14 +18,6 @@ export default StyleSheet.create({
     marginVertical: 12,
   },
   durationButton: {
-    flex: 1,            // para dividir espaço igualmente
-    marginHorizontal: 5,
-    paddingVertical: 10,
-    borderRadius: 6,
-    backgroundColor: '#ddd', // cor base
-    alignItems: 'center',
-  },
-  durationButton: {
     paddingVertical: 12,
     paddingHorizontal: 20,
     backgroundColor: '#1f1f1f',
@@ -36,7 +28,7 @@ export default StyleSheet.create({
     backgroundColor: '#007AFF',
   },
   durationText: {
-    color: '#000',
+    color: '#ccc',
     fontWeight: '600',
   },
   insertButton: {
