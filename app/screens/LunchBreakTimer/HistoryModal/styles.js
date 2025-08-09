@@ -11,19 +11,20 @@ export default StyleSheet.create({
     modalContent: {
         backgroundColor: 'white',
         borderRadius: 8,
-        width: '100%',
-        maxHeight: '80%',
+        maxHeight: '90%',
+        minWidth: '90%',
         padding: 16,
+        flexDirection: 'column',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
     },
     title: {
-        fontSize: 18,
-        fontWeight: '600',
+        color: 'black',
+        fontSize: 20,
+        fontWeight: 'bold',
     },
     calendarButton: {
         flexDirection: 'row',
@@ -35,15 +36,16 @@ export default StyleSheet.create({
         color: '#007AFF',
         fontWeight: '500',
     },
-    list: {
-        flexGrow: 0,
-    },
     item: {
-        paddingVertical: 10,
+        padding: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
+        borderColor: '#ddd',
+    },
+    durationText: {
+        color: '#333'
     },
     dateText: {
+        color: '#000',
         fontSize: 16,
         fontWeight: '600',
     },
@@ -58,8 +60,7 @@ export default StyleSheet.create({
     },
     emptyText: {
         textAlign: 'center',
-        color: '#999',
         marginTop: 20,
-        fontStyle: 'italic',
+        color: '#999',
     },
 });

@@ -6,19 +6,19 @@ import {
   FlatList,
   TouchableOpacity,
   Platform,
+  ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { LunchBreakTimeHistoryActions } from '../../../services/database/actions/LunchBreakTimeHistory.actions'
+import { LunchBreakTimeHistoryActions } from '../../../services/database/actions/LunchBreakTimeHistory.actions';
 import styles from './styles';
 
 const getWeekDays = (date) => {
   const day = date.getDay();
   const monday = new Date(date);
-  monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1)); 
-
+  monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
   let weekDays = [];
-  for (let i = 0; i < 5; i++) { 
+  for (let i = 0; i < 5; i++) {
     let d = new Date(monday);
     d.setDate(monday.getDate() + i);
     weekDays.push(d);
@@ -39,8 +39,8 @@ const formatTime = (isoString) => {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 };
 
-const getWeekDayShort = (date) => {
-  const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const getWeekDay = (date) => {
+  const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
   return days[date.getDay()];
 };
 
@@ -61,17 +61,15 @@ export default function LunchBreakHistoryModal({ visible, onClose }) {
   const loadHistory = async () => {
     try {
       const allData = await LunchBreakTimeHistoryActions.getAll();
-
-      // Filtra os registros da semana selecionada (segunda a sexta)
       const filtered = allData.filter((item) => {
         const itemDate = new Date(item.date);
-        return weekDays.some((wd) =>
-          wd.getDate() === itemDate.getDate() &&
-          wd.getMonth() === itemDate.getMonth() &&
-          wd.getFullYear() === itemDate.getFullYear()
+        return weekDays.some(
+          (wd) =>
+            wd.getDate() === itemDate.getDate() &&
+            wd.getMonth() === itemDate.getMonth() &&
+            wd.getFullYear() === itemDate.getFullYear()
         );
       });
-
       setHistory(filtered);
     } catch (err) {
       console.error('Erro ao carregar histórico:', err);
@@ -88,47 +86,53 @@ export default function LunchBreakHistoryModal({ visible, onClose }) {
   const renderItem = ({ item }) => (
     <View style={styles.item}>
       <Text style={styles.dateText}>{formatDate(new Date(item.date))}</Text>
-      <Text style={styles.weekDayText}>{item.weekday || getWeekDayShort(new Date(item.date))}</Text>
+      <Text style={styles.weekDayText}>{getWeekDay(new Date(item.date))}</Text>
       <Text style={styles.timeText}>
-        Saída: {formatTime(item.startTime)} | Volta: {formatTime(item.endTime)}
+        Saída: {formatTime(item.startTime)} | Retorno: {formatTime(item.endTime)}
       </Text>
       <Text style={styles.durationText}>Duração: {item.durationMinutes} min</Text>
     </View>
   );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
+    <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Histórico do Almoço</Text>
+            <Text style={styles.title}>Histórico</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={28} color="#333" />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.calendarButton} onPress={openDatePicker}>
-            <Ionicons name="calendar" size={24} color="#007AFF" />
-            <Text style={styles.calendarButtonText}>Selecionar data</Text>
-          </TouchableOpacity>
+          <View>
+            <TouchableOpacity style={styles.calendarButton} onPress={openDatePicker}>
+              <Ionicons name="calendar" size={24} color="#007AFF" />
+              <Text style={styles.calendarButtonText}>Selecionar data</Text>
+            </TouchableOpacity>
 
-          {showPicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display="calendar"
-              onChange={onDateChange}
-              maximumDate={new Date()}
+            {showPicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="calendar"
+                onChange={onDateChange}
+                maximumDate={new Date()}
+              />
+            )}
+          </View>
+
+          <View style={{ flex: 1, marginTop: 10 }}>
+            <FlatList
+              data={history}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={renderItem}
+              ListEmptyComponent={
+                <Text style={styles.emptyText}>Nenhum registro nessa semana.</Text>
+              }
+              contentContainerStyle={{ paddingBottom: 20 }}
             />
-          )}
-
-          <FlatList
-            data={history}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderItem}
-            style={styles.list}
-            ListEmptyComponent={<Text style={styles.emptyText}>Nenhum registro nessa semana.</Text>}
-          />
+          </View>
         </View>
       </View>
     </Modal>
