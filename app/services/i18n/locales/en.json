@@ -1,0 +1,13 @@
+{
+    "Home": {
+        "appTitle": "Helper",
+        "searchPlaceholder": "Search apps...",
+        "sortAZ": "A-Z",
+        "sortMostUsed": "Most Utilized",
+        "titles": {
+            "timeCalc": "Timer Calculator",
+            "lunchBreakTimer": "Lunch Breaker Timer",
+            "gradeCalc": "Grade Calculator"
+        }
+    }
+}

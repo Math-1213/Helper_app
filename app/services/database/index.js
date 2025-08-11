@@ -11,10 +11,15 @@ export async function getDB() {
     if (dbInstance) return dbInstance;
     dbInstance = await SQLite.openDatabase({ name: 'helper.db', location: 'default' });
 
-    await dbInstance.executeSql(LunchBreakTimeHistorySchema.create);
-    await dbInstance.executeSql(SubjectsSchema.createSubjects);
-    await dbInstance.executeSql(SubjectsSchema.createGrades);
-    await dbInstance.executeSql(ModulesSchema.create);
+    try {
+        await dbInstance.executeSql(LunchBreakTimeHistorySchema.create);
+        await dbInstance.executeSql(SubjectsSchema.createSubjects);
+        await dbInstance.executeSql(SubjectsSchema.createGrades);
+        await dbInstance.executeSql(ModulesSchema.create);
+        console.log('Tabelas criadas');
+    } catch (e) {
+        console.log('Erro criando tabelas:', e);
+    }
 
     return dbInstance;
 }
