@@ -1,5 +1,4 @@
 import { addHours } from 'date-fns';
-import RealmActions from '../realm/actions';
 import { ToastAndroid } from 'react-native';
 import store from '../redux';
 

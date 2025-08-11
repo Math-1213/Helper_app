@@ -1,0 +1,95 @@
+{
+  "home": {
+    "appTitle": "Helper",
+    "searchPlaceholder": "Buscar apps...",
+    "sortAZ": "A-Z",
+    "sortMostUsed": "Mais Utilizados",
+    "titles": {
+      "timeCalc": "Calculadora de Hora",
+      "lunchBreakTimer": "Temporizador de Almoço",
+      "gradeCalc": "Calculadora de Médias"
+    }
+  },
+  "gradeCalc": {
+    "moduleName": "Calculadora de Médias",
+    "subjectName": "Nome da Matéria",
+    "calcMode": {
+      "avg": "Média Ponderada",
+      "sum": "Somar Valores",
+      "mode": "Calculado por: "
+    },
+    "row": {
+      "name": "Nome",
+      "weight": "Peso",
+      "grade": "Nota"
+    },
+    "addRow": "Adicionar Nota",
+    "currentAvg": "Média Atual",
+    "save": "Salvar",
+    "openList": "Abrir Lista de Matérias",
+    "alerts": {
+      "noSubject": "Por favor, informe o nome da matéria",
+      "noRow": "Adicione pelo menos um trabalho com nota",
+      "sucessUpdate": "Matéria atualizada com sucesso!",
+      "sucessInsert": "Matéria salva com sucesso!",
+      "failChange": "Erro ao salvar a matéria. Tente novamente.",
+      "failDelete": "Erro ao excluir a matéria. Tente novamente."
+    },
+    "confirmDelete": {
+      "confirmDelete": "Confirmar exclusão",
+      "confirmDeleteSubject": "Deseja excluir a matéria \"{{subjectName}}\"?",
+      "cancel": "Cancelar",
+      "delete": "Excluir"
+    },
+    "subjectList": "Lista de Matérias",
+    "current": "Nota atual: ",
+    "noSubject": "Nenhuma matéria salva."
+  },
+  "lunchTimer": {
+    "moduleName": "Temporizador de Almoço",
+    "timer": {
+      "timeLeft": "Tempo Restante",
+      "finishNow": "Encerrar Agora",
+      "lunch": "Almoço",
+      "manualExit": "Almoço Finalizado Manualmente",
+      "finishTIme": "Tempo Encerrado",
+      "noMoreTime": "Seu Tempo Acabou",
+      "finishLunch": "Tempo de almoço encerrado!",
+      "goLunch": "Almoço iniciado! Retorno às {{time}}"
+    },
+    "daysOfWeek": {
+      "sunday": "Domingo",
+      "monday": "Segunda-feira",
+      "tuesday": "Terça-feira",
+      "wednesday": "Quarta-feira",
+      "thursday": "Quinta-feira",
+      "friday": "Sexta-feira",
+      "saturday": "Sábado"
+    },
+    "history": {
+      "exit": "Saída: ",
+      "return": "Retorno: ",
+      "duration": "Duração: ",
+      "title": "Histórico",
+      "selectDate": "Selecionar data",
+      "emptyText": "Nenhum registro nessa semana."
+    },
+    "alert": {
+      "exit": "Não foi possível encerrar o timer corretamente.",
+      "timerError": "Não foi possível iniciar o timer. Tente novamente.",
+      "moreThanZero": "Por favor, digite um número válido maior que zero."
+    },
+    "custonDur": "Duração customizada (minutos)",
+    "inputTime": "Digite a duração em minutos",
+    "exitTime": "Horário de Saída",
+    "duration": "Duração:",
+    "seeHistory": "Ver Horários Anteriores",
+    "start": "Começar"
+  },
+  "timeCalc": {
+    "moduleName": "Calculadora de Hora",
+    "sum": "Somar",
+    "sub": "Subtrair",
+    "result": "Resultado"
+  }
+}
