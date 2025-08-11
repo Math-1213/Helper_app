@@ -116,4 +116,27 @@ export default StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#fff',  // ajusta para dark mode, se quiser
+  },
+  subjectInput: {
+    borderWidth: 1,
+    borderColor: '#555',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 18,
+    color: '#eee',
+    backgroundColor: '#222',
+    marginBottom: 16,
+  },
+  disabledInput: {
+    backgroundColor: '#141414ff', // cinza claro
+    color: '#999',              // texto mais apagado
+    borderColor: '#1e1e1e'
+  }
+
 });

@@ -10,12 +10,9 @@ export async function getDB() {
     if (dbInstance) return dbInstance;
     dbInstance = await SQLite.openDatabase({ name: 'helper.db', location: 'default' });
 
-    // Tabelas
     await dbInstance.executeSql(LunchBreakTimeHistorySchema.create);
-
     await dbInstance.executeSql(SubjectsSchema.createSubjects);
     await dbInstance.executeSql(SubjectsSchema.createGrades);
-    
+
     return dbInstance;
 }
-

@@ -1,16 +1,39 @@
-// GradeCalc.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+} from 'react-native';
 import styles from './styles';
 
 const defaultRow = { id: Date.now().toString(), name: '', weight: '', grade: '' };
 
-export default function GradeCalc({ onSave }) {
-    const [rows, setRows] = useState([defaultRow]);
-    const [modeWeighted, setModeWeighted] = useState(true);
+export default function GradeCalc({ onSave, initialData }) {
+    const [subjectName, setSubjectName] = useState(initialData?.name || '');
+    const [rows, setRows] = useState(
+        initialData?.grades && initialData.grades.length > 0
+            ? initialData.grades.map(g => ({
+                id: Date.now().toString() + Math.random(),
+                name: g.name || '',
+                weight: g.weight?.toString() || '',
+                grade: g.score?.toString() || '',
+            }))
+            : [defaultRow]
+    );
+    const [modeWeighted, setModeWeighted] = useState(
+        initialData?.weightMode !== undefined
+            ? Boolean(initialData.weightMode)
+            : true
+    );
     const [average, setAverage] = useState(0);
 
     useEffect(() => {
+        console.log("Inital Data:", initialData, modeWeighted)
         if (modeWeighted) {
             let totalWeight = 0;
             let total = 0;
@@ -46,7 +69,20 @@ export default function GradeCalc({ onSave }) {
     };
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+        >
+
+            {/* Título e input nome da matéria */}
+            <Text style={styles.title}>Grade Calculator</Text>
+            <TextInput
+                placeholder="Subject Name"
+                placeholderTextColor="#aaa"
+                style={styles.subjectInput}
+                value={subjectName}
+                onChangeText={setSubjectName}
+                autoCapitalize="words"
+            />
 
             {/* Toggle Mode */}
             <View style={styles.toggleContainer}>
@@ -77,6 +113,7 @@ export default function GradeCalc({ onSave }) {
             <FlatList
                 data={rows}
                 keyExtractor={item => item.id}
+                nestedScrollEnabled={true}
                 renderItem={({ item }) => (
                     <View style={styles.tableRow}>
                         <TextInput
@@ -90,12 +127,18 @@ export default function GradeCalc({ onSave }) {
                         <TextInput
                             placeholder="Weight"
                             placeholderTextColor="#aaa"
-                            style={[styles.cell, styles.weightCol, styles.input]}
+                            style={[
+                                styles.cell,
+                                styles.weightCol,
+                                styles.input,
+                                !modeWeighted && styles.disabledInput // aplica um estilo "desativado"
+                            ]}
                             keyboardType="numeric"
                             value={item.weight}
                             onChangeText={text => updateRow(item.id, 'weight', text)}
                             editable={modeWeighted}
                         />
+
                         <TextInput
                             placeholder="Grade"
                             placeholderTextColor="#aaa"
@@ -126,10 +169,12 @@ export default function GradeCalc({ onSave }) {
             </View>
 
             {/* Save Button */}
-            <TouchableOpacity style={styles.saveButton} onPress={() => onSave(rows, average)}>
+            <TouchableOpacity
+                style={styles.saveButton}
+                onPress={() => onSave({ subjectName, rows, average, modeWeighted: !modeWeighted })}
+            >
                 <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
-
-        </View>
+        </KeyboardAvoidingView>
     );
 }

@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 const apps = [
   { id: '1', name: 'Calculadora de Hora', usage: 10, screenTitle: "TimeCalculator" },
   { id: '2', name: 'Temporizador de Almoço', usage: 5, screenTitle: "LunchBreakTimer" },
-  { id: '2', name: 'Calculadora de Médias', usage: 5, screenTitle: "GradeCalcScreen" },
+  { id: '3', name: 'Calculadora de Médias', usage: 5, screenTitle: "GradeCalcScreen" },
 ];
 
 const SORT_OPTIONS = {

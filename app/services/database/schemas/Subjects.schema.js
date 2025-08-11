@@ -3,7 +3,8 @@ export const SubjectsSchema = {
     createSubjects: `
     CREATE TABLE IF NOT EXISTS subjects (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL
+      name TEXT NOT NULL,
+      calc_mode INTEGER NOT NULL
     );
   `,
     createGrades: `
@@ -11,7 +12,7 @@ export const SubjectsSchema = {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       subject_id INTEGER NOT NULL,
       name TEXT NOT NULL,
-      weight REAL NOT NULL,
+      weight REAL,
       score REAL NOT NULL,
       FOREIGN KEY(subject_id) REFERENCES subjects(id) ON DELETE CASCADE
     );
