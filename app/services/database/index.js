@@ -1,6 +1,7 @@
 import SQLite from 'react-native-sqlite-storage';
 import { LunchBreakTimeHistorySchema } from './schemas/LunchBreakTimeHistory.schema';
 import { SubjectsSchema } from './schemas/Subjects.schema';
+import { ModulesSchema } from './schemas/Modules.schema';
 
 SQLite.enablePromise(true);
 
@@ -13,6 +14,7 @@ export async function getDB() {
     await dbInstance.executeSql(LunchBreakTimeHistorySchema.create);
     await dbInstance.executeSql(SubjectsSchema.createSubjects);
     await dbInstance.executeSql(SubjectsSchema.createGrades);
+    await dbInstance.executeSql(ModulesSchema.create);
 
     return dbInstance;
 }
