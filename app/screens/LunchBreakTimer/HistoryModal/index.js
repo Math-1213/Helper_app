@@ -12,6 +12,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { LunchBreakTimeHistoryActions } from '../../../services/database/actions/LunchBreakTimeHistory.actions';
 import styles from './styles';
+import { useTranslation } from 'react-i18next';
 
 const getWeekDays = (date) => {
   const day = date.getDay();
@@ -39,16 +40,28 @@ const formatTime = (isoString) => {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 };
 
-const getWeekDay = (date) => {
-  const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-  return days[date.getDay()];
-};
+
 
 export default function LunchBreakHistoryModal({ visible, onClose }) {
+  const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [weekDays, setWeekDays] = useState(getWeekDays(selectedDate));
   const [history, setHistory] = useState([]);
+
+  const getWeekDay = (date) => {
+    const days = [
+      t('daysOfWeek.sunday'),
+      t('daysOfWeek.monday'),
+      t('daysOfWeek.tuesday'),
+      t('daysOfWeek.wednesday'),
+      t('daysOfWeek.thursday'),
+      t('daysOfWeek.friday'),
+      t('daysOfWeek.saturday')
+    ];
+
+    return days[date.getDay()];
+  };
 
   useEffect(() => {
     setWeekDays(getWeekDays(selectedDate));
@@ -88,9 +101,9 @@ export default function LunchBreakHistoryModal({ visible, onClose }) {
       <Text style={styles.dateText}>{formatDate(new Date(item.date))}</Text>
       <Text style={styles.weekDayText}>{getWeekDay(new Date(item.date))}</Text>
       <Text style={styles.timeText}>
-        Saída: {formatTime(item.startTime)} | Retorno: {formatTime(item.endTime)}
+        {t('lunchTimer.history.exit')} {formatTime(item.startTime)} | {t('lunchTimer.history.return')} {formatTime(item.endTime)}
       </Text>
-      <Text style={styles.durationText}>Duração: {item.durationMinutes} min</Text>
+      <Text style={styles.durationText}>{t('lunchTimer.history.duration')} {item.durationMinutes} min</Text>
     </View>
   );
 
@@ -99,7 +112,7 @@ export default function LunchBreakHistoryModal({ visible, onClose }) {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Histórico</Text>
+            <Text style={styles.title}>{t('lunchTimer.history.title')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={28} color="#333" />
             </TouchableOpacity>
@@ -108,7 +121,7 @@ export default function LunchBreakHistoryModal({ visible, onClose }) {
           <View>
             <TouchableOpacity style={styles.calendarButton} onPress={openDatePicker}>
               <Ionicons name="calendar" size={24} color="#007AFF" />
-              <Text style={styles.calendarButtonText}>Selecionar data</Text>
+              <Text style={styles.calendarButtonText}>{t('lunchTimer.history.selectDate')}</Text>
             </TouchableOpacity>
 
             {showPicker && (
@@ -128,7 +141,7 @@ export default function LunchBreakHistoryModal({ visible, onClose }) {
               keyExtractor={(item) => String(item.id)}
               renderItem={renderItem}
               ListEmptyComponent={
-                <Text style={styles.emptyText}>Nenhum registro nessa semana.</Text>
+                <Text style={styles.emptyText}>{t('lunchTimer.history.emptyText')}</Text>
               }
               contentContainerStyle={{ paddingBottom: 20 }}
             />

@@ -10,10 +10,12 @@ import {
     ScrollView,
 } from 'react-native';
 import styles from './styles';
+import { useTranslation } from 'react-i18next';
 
 const defaultRow = { id: Date.now().toString(), name: '', weight: '', grade: '' };
 
 export default function GradeCalc({ onSave, initialData }) {
+    const { t } = useTranslation();
     const [subjectName, setSubjectName] = useState(initialData?.name || '');
     const [rows, setRows] = useState(
         initialData?.grades && initialData.grades.length > 0
@@ -33,7 +35,6 @@ export default function GradeCalc({ onSave, initialData }) {
     const [average, setAverage] = useState(0);
 
     useEffect(() => {
-        console.log("Inital Data:", initialData, modeWeighted)
         if (modeWeighted) {
             let totalWeight = 0;
             let total = 0;
@@ -74,9 +75,9 @@ export default function GradeCalc({ onSave, initialData }) {
         >
 
             {/* Título e input nome da matéria */}
-            <Text style={styles.title}>Grade Calculator</Text>
+            <Text style={styles.title}>{t('gradeCalc.moduleName')}</Text>
             <TextInput
-                placeholder="Subject Name"
+                placeholder={t('gradeCalc.subjectName')}
                 placeholderTextColor="#aaa"
                 style={styles.subjectInput}
                 value={subjectName}
@@ -90,22 +91,22 @@ export default function GradeCalc({ onSave, initialData }) {
                     style={[styles.toggleButton, modeWeighted && styles.toggleActive]}
                     onPress={() => setModeWeighted(true)}
                 >
-                    <Text style={modeWeighted ? styles.toggleTextActive : styles.toggleText}>Weighted Average</Text>
+                    <Text style={modeWeighted ? styles.toggleTextActive : styles.toggleText}>{t('gradeCalc.calcMode.avg')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                     style={[styles.toggleButton, !modeWeighted && styles.toggleActive]}
                     onPress={() => setModeWeighted(false)}
                 >
-                    <Text style={!modeWeighted ? styles.toggleTextActive : styles.toggleText}>Sum Values</Text>
+                    <Text style={!modeWeighted ? styles.toggleTextActive : styles.toggleText}>{t('gradeCalc.calcMode.sum')}</Text>
                 </TouchableOpacity>
             </View>
 
             {/* Table Header */}
             <View style={styles.tableHeader}>
-                <Text style={[styles.cell, styles.nameCol, styles.headerText]}>Name</Text>
-                <Text style={[styles.cell, styles.weightCol, styles.headerText]}>Weight</Text>
-                <Text style={[styles.cell, styles.gradeCol, styles.headerText]}>Grade</Text>
+                <Text style={[styles.cell, styles.nameCol, styles.headerText]}>{t('gradeCalc.row.name')}</Text>
+                <Text style={[styles.cell, styles.weightCol, styles.headerText]}>{t('gradeCalc.row.weight')}</Text>
+                <Text style={[styles.cell, styles.gradeCol, styles.headerText]}>{t('gradeCalc.row.grade')}</Text>
                 <Text style={[styles.cell, styles.removeCol]}></Text>
             </View>
 
@@ -117,7 +118,7 @@ export default function GradeCalc({ onSave, initialData }) {
                 renderItem={({ item }) => (
                     <View style={styles.tableRow}>
                         <TextInput
-                            placeholder="Name"
+                            placeholder={t('gradeCalc.row.name')}
                             placeholderTextColor="#aaa"
                             style={[styles.cell, styles.nameCol, styles.input]}
                             value={item.name}
@@ -125,7 +126,7 @@ export default function GradeCalc({ onSave, initialData }) {
                             autoCapitalize="none"
                         />
                         <TextInput
-                            placeholder="Weight"
+                            placeholder={t('gradeCalc.row.weight')}
                             placeholderTextColor="#aaa"
                             style={[
                                 styles.cell,
@@ -140,7 +141,7 @@ export default function GradeCalc({ onSave, initialData }) {
                         />
 
                         <TextInput
-                            placeholder="Grade"
+                            placeholder={t('gradeCalc.row.grade')}
                             placeholderTextColor="#aaa"
                             style={[styles.cell, styles.gradeCol, styles.input]}
                             keyboardType="numeric"
@@ -159,12 +160,12 @@ export default function GradeCalc({ onSave, initialData }) {
 
             {/* Add Row Button */}
             <TouchableOpacity style={styles.addButton} onPress={addRow}>
-                <Text style={styles.addButtonText}>Add Row</Text>
+                <Text style={styles.addButtonText}>{t('gradeCalc.addRow')}</Text>
             </TouchableOpacity>
 
             {/* Average Display */}
             <View style={styles.averageContainer}>
-                <Text style={styles.averageLabel}>Current Average:</Text>
+                <Text style={styles.averageLabel}>{t('gradeCalc.currentAvg')}:</Text>
                 <Text style={styles.averageValue}>{average.toFixed(2)}</Text>
             </View>
 
@@ -173,7 +174,7 @@ export default function GradeCalc({ onSave, initialData }) {
                 style={styles.saveButton}
                 onPress={() => onSave({ subjectName, rows, average, modeWeighted: !modeWeighted })}
             >
-                <Text style={styles.saveButtonText}>Save</Text>
+                <Text style={styles.saveButtonText}>{t('gradeCalc.save')}</Text>
             </TouchableOpacity>
         </KeyboardAvoidingView>
     );

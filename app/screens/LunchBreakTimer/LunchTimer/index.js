@@ -4,11 +4,13 @@ import BackgroundTimer from 'react-native-background-timer';
 import { Notifications } from 'react-native-notifications';
 import ProgressBar from 'react-native-progress/Bar';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { LunchBreakTimeHistoryActions } from '../../../services/database/actions/LunchBreakTimeHistory.actions';
 import styles from './styles';
 
 export default function LunchTimer() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const route = useRoute();
   const { id, startTime, endTime, duration } = route.params;
 
@@ -27,7 +29,7 @@ export default function LunchTimer() {
 
   const notify = (message) => {
     Notifications.postLocalNotification({
-      title: 'Almoço',
+      title: t('lunchTimer.timer.lunch'),
       body: message,
       extra: { screen: 'LunchTimer', id, startTime, endTime, duration },
     });
@@ -48,17 +50,17 @@ export default function LunchTimer() {
       await LunchBreakTimeHistoryActions.stopTimerBefore(payload);
     } catch (err) {
       console.error('Erro ao salvar info:', err, payload);
-      Alert.alert('Erro', 'Não foi possível encerrar o timer corretamente.');
+      Alert.alert('Erro', t('lunchTimer.exit'));
     }
 
-    notify('Timer encerrado manualmente.');
+    notify(t('lunchTimer.timer.manualExit'));
     navigation.goBack();
   };
 
   function handleEndTimer() {
     Alert.alert(
-      'Tempo encerrado',
-      'Seu tempo de almoço acabou.',
+      t('lunchTimer.timer.finishTime'),
+      t('lunchTimer.timer.noMoreTime'),
       [
         {
           text: 'OK',
@@ -70,13 +72,13 @@ export default function LunchTimer() {
   }
 
   useEffect(() => {
-    notify(`Almoço iniciado! Retorno às ${end.toLocaleTimeString().slice(0, 5)}`);
+    notify(t('lunchTimer.timer.lunch', { time: end.toLocaleTimeString().slice(0, 5) }));
 
     intervalRef.current = BackgroundTimer.setInterval(() => {
       setRemainingSeconds((prev) => {
         if (prev <= 1) {
           BackgroundTimer.clearInterval(intervalRef.current);
-          notify('Tempo de almoço encerrado!');
+          notify(t('lunchTimer.timer.finishLunch'));
           handleEndTimer();
           return 0;
         }
@@ -104,7 +106,7 @@ export default function LunchTimer() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tempo Restante</Text>
+      <Text style={styles.title}>{t('lunchTimer.timer.timeLeft')}</Text>
       <Text style={styles.timerText}>{formatTime(remainingSeconds)}</Text>
 
       <ProgressBar
@@ -117,7 +119,7 @@ export default function LunchTimer() {
       />
 
       <TouchableOpacity style={styles.stopButton} onPress={stopTimer}>
-        <Text style={styles.stopButtonText}>Encerrar Agora</Text>
+        <Text style={styles.stopButtonText}>{t('lunchTimer.timer.finishNow')}</Text>
       </TouchableOpacity>
     </View>
   );

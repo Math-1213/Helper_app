@@ -4,6 +4,7 @@ import TimeDisplay from '../../components/TimeDisplay';
 import styles from './styles';
 import HistoryModal from './HistoryModal';
 import { LunchBreakTimeHistoryActions } from '../../services/database/actions/LunchBreakTimeHistory.actions'
+import { useTranslation } from 'react-i18next';
 
 const predefinedDurations = [30, 45, 60]; // Só 0h30, 0h45 e 1h
 
@@ -33,6 +34,7 @@ const timeValueToDate = (timeValue) => {
 };
 
 export default function LunchBreakerScreen({ navigation }) {
+  const { t } = useTranslation();
   const defaultStartTime = new Date();
 
   const [startTime, setStartTime] = useState(defaultStartTime);
@@ -76,7 +78,7 @@ export default function LunchBreakerScreen({ navigation }) {
 
     } catch (err) {
       console.error('Erro ao iniciar o timer:', err);
-      alert('Não foi possível iniciar o timer. Tente novamente.');
+      alert(t('lunchTimer.alert.timerError'));
     }
   };
 
@@ -102,11 +104,11 @@ export default function LunchBreakerScreen({ navigation }) {
             padding: 20,
           }}>
             <Text style={{ fontSize: 18, marginBottom: 10, color: '#eee' }}>
-              Duração customizada (minutos)
+              {t('lunchTimer.custonDur')}
             </Text>
             <TextInput
               keyboardType="numeric"
-              placeholder="Digite a duração em minutos"
+              placeholder={t('lunchTimer.inputTime')}
               placeholderTextColor="#888"
               value={customDurationInput}
               onChangeText={setCustomDurationInput}
@@ -130,7 +132,7 @@ export default function LunchBreakerScreen({ navigation }) {
                   setDuration(parsed);
                   setCustomDurationModalVisible(false);
                 } else {
-                  alert('Por favor, digite um número válido maior que zero.');
+                  alert(t('lunchTimer.alert.moreThanZero'));
                 }
               }}
               color="#4CAF50"
@@ -145,10 +147,10 @@ export default function LunchBreakerScreen({ navigation }) {
         </View>
       </Modal>
 
-      <Text style={styles.title}>Horário de Almoço</Text>
+      <Text style={styles.title}>{t('lunchTimer.moduleName')}</Text>
 
       {/* Texto acima do TimeDisplay */}
-      <Text style={styles.label}>Horário de Saída</Text>
+      <Text style={styles.label}>{t('lunchTimer.exitTime')}</Text>
       <TimeDisplay
         value={startTimeValue}
         onChange={handleTimeChange}
@@ -156,7 +158,7 @@ export default function LunchBreakerScreen({ navigation }) {
         showSeconds={false}
       />
 
-      <Text style={styles.subTitle}>Duração:</Text>
+      <Text style={styles.subTitle}>{t('lunchTimer.duration')}</Text>
 
       <View style={styles.durationButtons}>
         {predefinedDurations.map((d) => {
@@ -197,11 +199,11 @@ export default function LunchBreakerScreen({ navigation }) {
       </View>
 
       <TouchableOpacity style={styles.insertButton} onPress={handleStart} activeOpacity={0.8}>
-        <Text style={styles.insertButtonText}>Começar</Text>
+        <Text style={styles.insertButtonText}>{t('lunchTimer.start')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.historyButton} onPress={() => setShowHistory(true)} activeOpacity={0.8}>
-        <Text style={styles.historyButtonText}>Ver Horários Anteriores</Text>
+        <Text style={styles.historyButtonText}>{t('lunchTimer.seeHistory')}</Text>
       </TouchableOpacity>
 
       {showHistory && (

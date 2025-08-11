@@ -4,9 +4,11 @@ import GradeCalc from './GradeCalc';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import styles from './styles';
 import { SubjectsActions } from '../../services/database/actions/Subjects.actions';
+import { useTranslation } from 'react-i18next';
 
 export default function GradeCalcScreen() {
     const navigation = useNavigation();
+    const { t } = useTranslation();
     const route = useRoute();
 
     const [currentGrades, setCurrentGrades] = useState(null);
@@ -19,11 +21,11 @@ export default function GradeCalcScreen() {
 
     const handleSave = async ({ subjectName, rows, average, modeWeighted }) => {
         if (!subjectName.trim()) {
-            alert('Por favor, informe o nome da matéria.');
+            alert(t('gradeCalc.alerts.noSubject'));
             return;
         }
         if (!rows.length) {
-            alert('Adicione pelo menos um trabalho com nota.');
+            alert(t('gradeCalc.alerts.noRow'));
             return;
         }
 
@@ -45,7 +47,7 @@ export default function GradeCalcScreen() {
                     mode: modeWeighted === true ? 1 : 0,
                     grades,
                 });
-                alert('Matéria atualizada com sucesso!');
+                alert(t('gradeCalc.alerts.sucessUpdate'));
             } else {
                 console.log(modeWeighted)
                 // Insert
@@ -54,12 +56,12 @@ export default function GradeCalcScreen() {
                     mode: modeWeighted === true ? 1 : 0,
                     grades,
                 });
-                alert('Matéria salva com sucesso!');
+                alert(t('gradeCalc.alerts.sucessInsert'));
             }
             navigation.navigate('SubjectsList');
         } catch (error) {
             console.error('Erro ao salvar matéria:', error);
-            alert('Erro ao salvar a matéria. Tente novamente.');
+            alert(t('gradeCalc.alerts.failChange'));
         }
     };
 
@@ -76,7 +78,7 @@ export default function GradeCalcScreen() {
             />
 
             <View style={styles.buttonContainer}>
-                <Button title="Abrir Lista de Matérias" onPress={openSubjectsList} color="#4CAF50" />
+                <Button title={t('gradeCalc.openList')} onPress={openSubjectsList} color="#4CAF50" />
             </View>
         </View>
     );

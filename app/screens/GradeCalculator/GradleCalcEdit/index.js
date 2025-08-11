@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import GradeCalc from '../GradeCalc'; 
+import GradeCalc from '../GradeCalc';
 import { SubjectsActions } from '../../../services/database/actions/Subjects.actions';
 import styles from './styles';
+import { useTranslation } from 'react-i18next';
 
 export default function GradeCalcEditScreen() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const route = useRoute();
 
   const { subjectId, subjectName, gradesData, weightMode } = route.params || {};
@@ -18,11 +20,11 @@ export default function GradeCalcEditScreen() {
     console.log("Updated Grades: ", updatedGrades)
     setGrades(updatedGrades);
     if (!name.trim()) {
-      Alert.alert('Erro', 'Digite o nome da matéria');
+      Alert.alert(t('gradeCalc.alerts.noSubject'));
       return;
     }
     if (grades.length === 0) {
-      Alert.alert('Erro', 'Adicione pelo menos uma nota');
+      Alert.alert(t('gradeCalc.alerts.noRow'));
       return;
     }
 
@@ -31,12 +33,12 @@ export default function GradeCalcEditScreen() {
         id: subjectId,
         name: updatedGrades.subjectName,
         mode: updatedGrades.modeWeighted,
-        grades: updatedGrades.rows, 
+        grades: updatedGrades.rows,
       };
-      
-      await SubjectsActions.update(payload); 
 
-      Alert.alert('Sucesso', 'Matéria atualizada com sucesso!', [
+      await SubjectsActions.update(payload);
+
+      Alert.alert('Sucesso', t('gradeCalc.alerts.sucessUpdate'), [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),
@@ -44,7 +46,7 @@ export default function GradeCalcEditScreen() {
       ]);
     } catch (error) {
       console.error('Erro ao salvar matéria:', error);
-      Alert.alert('Erro', 'Não foi possível salvar. Tente novamente.');
+      Alert.alert('Erro', t('gradeCalc.alerts.failChange'));
     }
   };
 
@@ -59,7 +61,7 @@ export default function GradeCalcEditScreen() {
         grades,
         weightMode: !weightMode
 
-      }}/>
+      }} />
     </KeyboardAvoidingView>
   );
 }

@@ -3,20 +3,25 @@ import { SafeAreaView, View, Text, TextInput, TouchableOpacity, FlatList } from 
 import styles from './styles';
 import { useNavigation } from '@react-navigation/native';
 import { ModulesActions } from '../../services/database/actions/Modules.actions';
-
-const defaultModules = [
-  { id: 1, name: 'Calculadora de Hora', usage: 0, screen_title: 'TimeCalculator' },
-  { id: 2, name: 'Temporizador de Almoço', usage: 0, screen_title: 'LunchBreakTimer' },
-  { id: 3, name: 'Calculadora de Médias', usage: 0, screen_title: 'GradeCalcScreen' },
-];
-
-const SORT_OPTIONS = {
-  AZ: 'A-Z',
-  MOST_USED: 'Most Utilized',
-};
+import { useTranslation } from 'react-i18next';
+import i18n from '../../services/i18n';
 
 export default function App() {
+
   const navigation = useNavigation();
+  const { t } = useTranslation();
+
+  const defaultModules = [
+    { id: 1, name: 'home.titles.timeCalc', usage: 0, screen_title: 'TimeCalculator' },
+    { id: 2, name: 'home.titles.lunchBreakTimer', usage: 0, screen_title: 'LunchBreakTimer' },
+    { id: 3, name: 'home.titles.gradeCalc', usage: 0, screen_title: 'GradeCalcScreen' },
+  ];
+
+  const SORT_OPTIONS = {
+    AZ: 'home.sortAZ',
+    MOST_USED: 'home.sortMostUsed',
+  };
+
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState(SORT_OPTIONS.AZ);
   const [apps, setApps] = useState([]);
@@ -26,6 +31,7 @@ export default function App() {
     async function init() {
       await ModulesActions.ensureDefaultsExist(defaultModules);
       const modulesFromDB = await ModulesActions.getAll();
+      console.log(modulesFromDB)
       setApps(modulesFromDB);
     }
     init();
@@ -33,7 +39,7 @@ export default function App() {
 
   useEffect(() => {
     const filtered = (apps || [])
-      .filter(app => app.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(app => t(app.name).toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => {
         if (sort === SORT_OPTIONS.AZ) {
           return a.name.localeCompare(b.name);
@@ -46,7 +52,6 @@ export default function App() {
   }, [apps, search, sort]);
 
   const renderAppItem = ({ item }) => {
-    // console.log('Renderizando app:', item);
     return (
       <TouchableOpacity
         style={styles.appItem}
@@ -57,18 +62,22 @@ export default function App() {
           navigation.navigate(item.screen_title);
         }}
       >
-        <Text style={styles.appName}>{item.name}</Text>
+        <Text style={styles.appName}>{t(item.name)}</Text>
       </TouchableOpacity>
     );
   };
 
+  const toggleLanguage = async () => {
+    const newLang = i18n.language === 'en' ? 'pt' : 'en';
+    i18n.changeLanguage(newLang);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Helper</Text>
-        <TouchableOpacity style={styles.translateButton}>
+        <Text style={styles.headerTitle}>{t('home.appTitle')}</Text>
+        <TouchableOpacity style={styles.translateButton} onPress={toggleLanguage}>
           <Text>🌐</Text>
         </TouchableOpacity>
       </View>
@@ -76,7 +85,7 @@ export default function App() {
       {/* Filters */}
       <View style={styles.filters}>
         <TextInput
-          placeholder="Search apps..."
+          placeholder={t('home.searchPlaceholder')}
           value={search}
           onChangeText={setSearch}
           style={styles.searchInput}
@@ -87,7 +96,7 @@ export default function App() {
             setSort(sort === SORT_OPTIONS.AZ ? SORT_OPTIONS.MOST_USED : SORT_OPTIONS.AZ);
           }}
         >
-          <Text style={styles.sortSelectorText}>{sort}</Text>
+          <Text style={styles.sortSelectorText}>{t(sort)}</Text>
         </TouchableOpacity>
       </View>
 

@@ -3,9 +3,11 @@ import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { SubjectsActions } from '../../../services/database/actions/Subjects.actions'; // Import corrigido
 import styles from './styles';
+import { useTranslation } from 'react-i18next';
 
 export default function SubjectsList() {
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const isFocused = useIsFocused();
 
   const [subjects, setSubjects] = useState([]);
@@ -19,7 +21,7 @@ export default function SubjectsList() {
   const loadSubjects = async () => {
     try {
       const list = await SubjectsActions.getAll();
-      console.log("Returned From DB: ", list)
+      // console.log("Returned From DB: ", list)
       setSubjects(list);
     } catch (error) {
       console.error('Erro ao carregar matérias:', error);
@@ -38,19 +40,19 @@ export default function SubjectsList() {
 
   const handleDelete = (subject) => {
     Alert.alert(
-      'Confirmar exclusão',
-      `Deseja excluir a matéria "${subject.name}"?`,
+      t('gradeCalc.confirmDelete.confirmDelete'),
+      t('gradeCalc.confirmDelete.confirmDeleteSubject', { subjectName: subject.name }),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('gradeCalc.confirmDelete.cancel'), style: 'cancel' },
         {
-          text: 'Excluir',
+          text: t('gradeCalc.confirmDelete.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               await SubjectsActions.remove(subject.id);
               loadSubjects();
             } catch (err) {
-              console.error('Erro ao excluir matéria:', err);
+              console.error(t('gradeCalc.alerts.failDelete'), err);
             }
           }
         }
@@ -83,7 +85,7 @@ export default function SubjectsList() {
       average = totalWeight > 0 ? average / totalWeight : 0;
     }
 
-    const modeLabel = isSumMode ? 'Soma dos valores' : 'Média Ponderada';
+    const modeLabel = isSumMode ? t('gradeCalc.calcMode.sum') : t('gradeCalc.calcMode.avg');
 
     return (
       <TouchableOpacity
@@ -92,21 +94,21 @@ export default function SubjectsList() {
         onLongPress={() => handleDelete(item)}
       >
         <Text style={styles.itemTitle}>{item.name}</Text>
-        <Text style={styles.itemSubtitle}>Nota atual: {average.toFixed(2)}</Text>
-        <Text style={styles.itemSubtitle}>Cálculo: {modeLabel}</Text>
+        <Text style={styles.itemSubtitle}>{t('gradeCalc.current')} {average.toFixed(2)}</Text>
+        <Text style={styles.itemSubtitle}>{t('gradeCalc.calcMode.mode')} {modeLabel}</Text>
       </TouchableOpacity>
     );
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Subjects List</Text>
+      <Text style={styles.title}>{t('gradeCalc.subjectList')}</Text>
       <FlatList
         data={subjects}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Nenhuma matéria salva.</Text>
+          <Text style={styles.emptyText}>{t('gradeCalc.noSubject')}</Text>
         }
       />
     </View>

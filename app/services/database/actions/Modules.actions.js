@@ -5,7 +5,6 @@ export const ModulesActions = {
         const db = await getDB();
         return new Promise((resolve, reject) => {
             db.transaction(tx => {
-                console.log(id, name, usage, screen_title)
                 tx.executeSql(
                     `INSERT OR IGNORE INTO modules (id, name, usage, screen_title) VALUES (?, ?, ?, ?);`,
                     [id, name, usage, screen_title],
@@ -27,7 +26,6 @@ export const ModulesActions = {
                     `UPDATE modules SET usage = ? WHERE id = ?;`,
                     [usage, id],
                     (_, result) => {
-                        console.log(id, usage, )
                         resolve(result)
                     },
                     (_, error) => {
@@ -55,12 +53,12 @@ export const ModulesActions = {
                         resolve(modules);
                     },
                     (_, error) => {
-                        console.log('SQL ERROR:', error);
+                        console.error('SQL ERROR:', error);
                         reject(error);
                     }
                 );
             }, (error) => {
-                console.log('TRANSACTION ERROR:', error);
+                console.error('TRANSACTION ERROR:', error);
                 reject(error);
             });
         });
@@ -71,7 +69,7 @@ export const ModulesActions = {
             try {
                 await ModulesActions.insert(mod);
             } catch (error) {
-                console.log('Error inserting default module:', error);
+                console.error('Error inserting default module:', error);
             }
         }
     },

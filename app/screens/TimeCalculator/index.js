@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import styles from './styles';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import TimeDisplay from '../../components/TimeDisplay';
 
@@ -19,6 +20,8 @@ function timeObjToMinutes(time) {
 }
 
 export default function TimeCalculator() {
+  const { t } = useTranslation();
+
   const [time1, setTime1] = useState({ hh: 0, mm: 0, ss: 0, ms: 0 });
   const [time2, setTime2] = useState({ hh: 0, mm: 0, ss: 0, ms: 0 });
   const [mode, setMode] = useState('add');
@@ -32,7 +35,7 @@ export default function TimeCalculator() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Calculadora de Hora</Text>
+      <Text style={styles.title}>{t('timeCalc.moduleName')}</Text>
 
       {/* Tempo 1 */}
       <View style={styles.timeBox}>
@@ -64,19 +67,19 @@ export default function TimeCalculator() {
           style={[styles.modeButton, mode === 'add' && styles.activeButton]}
           onPress={() => setMode('add')}
         >
-          <Text style={styles.buttonText}>Somar</Text>
+          <Text style={styles.buttonText}>{t('timeCalc.sum')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.modeButton, mode === 'subtract' && styles.activeButton]}
           onPress={() => setMode('subtract')}
         >
-          <Text style={styles.buttonText}>Subtrair</Text>
+          <Text style={styles.buttonText}>{t('timeCalc.sub')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Resultado com TimeDisplay */}
       <View style={[styles.timeBox, { alignItems: 'center', marginTop: 16 }]}>
-        <Text style={styles.resultLabel}>Resultado:</Text>
+        <Text style={styles.resultLabel}>{t('timeCalc.result')}</Text>
         <TimeDisplay
           editable={false}
           value={minutesToTimeObj(result)}

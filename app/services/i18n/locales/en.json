@@ -1,13 +1,95 @@
 {
-    "Home": {
+    "home": {
         "appTitle": "Helper",
         "searchPlaceholder": "Search apps...",
         "sortAZ": "A-Z",
         "sortMostUsed": "Most Utilized",
         "titles": {
-            "timeCalc": "Timer Calculator",
-            "lunchBreakTimer": "Lunch Breaker Timer",
+            "timeCalc": "Time Calculator",
+            "lunchBreakTimer": "Lunch Break Timer",
             "gradeCalc": "Grade Calculator"
         }
+    },
+    "gradeCalc": {
+        "moduleName": "Grade Calculator",
+        "subjectName": "Subject Name",
+        "calcMode": {
+            "avg": "Weighted Average",
+            "sum": "Sum Values",
+            "mode": "Calculated by: "
+        },
+        "row": {
+            "name": "Name",
+            "weight": "Weight",
+            "grade": "Grade"
+        },
+        "addRow": "Add Grade",
+        "currentAvg": "Current Average",
+        "save": "Save",
+        "openList": "Open Subject List",
+        "alerts": {
+            "noSubject": "Please enter the subject name",
+            "noRow": "Add at least one graded assignment",
+            "sucessUpdate": "Subject updated successfully!",
+            "sucessInsert": "Subject saved successfully!",
+            "failChange": "Error saving the subject. Please try again.",
+            "failDelete": "Error deleting the subject. Please try again."
+        },
+        "confirmDelete": {
+            "confirmDelete": "Confirm deletion",
+            "confirmDeleteSubject": "Do you want to delete the subject \"{{subjectName}}\"?",
+            "cancel": "Cancel",
+            "delete": "Delete"
+        },
+        "subjectList": "Subject List",
+        "current": "Current grade: ",
+        "noSubject": "No saved subjects."
+    },
+    "lunchTimer": {
+        "moduleName": "Lunch Break Timer",
+        "timer": {
+            "timeLeft": "Time Left",
+            "finishNow": "Finish Now",
+            "lunch": "Lunch",
+            "manualExit": "Lunch Ended Manually",
+            "finishTIme": "Time Finished",
+            "noMoreTime": "Your Time is Up",
+            "finishLunch": "Lunch time is over!",
+            "goLunch": "Lunch started! Return at {{time}}"
+        },
+        "daysOfWeek": {
+            "sunday": "Sunday",
+            "monday": "Monday",
+            "tuesday": "Tuesday",
+            "wednesday": "Wednesday",
+            "thursday": "Thursday",
+            "friday": "Friday",
+            "saturday": "Saturday"
+        },
+        "history": {
+            "exit": "Exit: ",
+            "return": "Return: ",
+            "duration": "Duration: ",
+            "title": "History",
+            "selectDate": "Select date",
+            "emptyText": "No records this week."
+        },
+        "alert": {
+            "exit": "Could not stop the timer correctly.",
+            "timerError": "Could not start the timer. Please try again.",
+            "moreThanZero": "Please enter a valid number greater than zero."
+        },
+        "custonDur": "Custom duration (minutes)",
+        "inputTime": "Enter duration in minutes",
+        "exitTime": "Exit Time",
+        "duration": "Duration:",
+        "seeHistory": "See Previous Times",
+        "start": "Start"
+    },
+    "timeCalc": {
+        "moduleName": "Time Calculator",
+        "sum": "Add",
+        "sub": "Subtract",
+        "result": "Result"
     }
 }
