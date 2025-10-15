@@ -3,7 +3,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 // import HomeScreen from "../screens/HomeScreen";
-import PokemonScreen from "../../modules/moduleTest/screens";
+// import PokemonScreen from "../../modules/moduleTest/screens";
+import PokemonScreenContainer from "../../modules/PokemonApi/screens/PokemonScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -22,7 +23,7 @@ export default function Router() {
         {/* <Stack.Screen name="Home" component={HomeScreen} /> */}
 
         {/* Telas dos módulos */}
-        <Stack.Screen name="test" component={PokemonScreen} />
+        <Stack.Screen name="test" component={PokemonScreenContainer} />
       </Stack.Navigator>
     </NavigationContainer>
   );

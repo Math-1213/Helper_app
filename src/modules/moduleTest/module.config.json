@@ -1,0 +1,7 @@
+{
+  "name": "pokemon",
+  "version": "1.0.0",
+  "sharedSlices": {
+    "pokemon": ["pokekey_public_1"]
+  }
+}
