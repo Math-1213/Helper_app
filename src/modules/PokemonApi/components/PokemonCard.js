@@ -2,10 +2,15 @@ import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 
 export default function PokemonCard({ pokemon }) {
+
+  function formatName(name){
+    return String(name).toUpperCase()
+  }
+
   return (
     <View style={styles.card}>
       <Image source={{ uri: pokemon.sprite }} style={styles.image} />
-      <Text style={styles.name}>{pokemon.name}</Text>
+      <Text style={styles.name}>{formatName(pokemon.name)}</Text>
       <Text style={styles.info}>Tipo: {pokemon.type}</Text>
       <Text style={styles.info}>Altura: {pokemon.height}</Text>
       <Text style={styles.info}>Peso: {pokemon.weight}</Text>

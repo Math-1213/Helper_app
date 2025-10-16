@@ -1,21 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Button, ScrollView, ToastAndroid } from 'react-native';
-import { ModuleProvider } from '../../../core/redux/ModuleContext';
 import { registerPokemonModule, persistPokemon } from '../store/register';
-import { useModuleSelector } from '../../../core/hooks/useModuleSelector';
 import { useDispatch } from 'react-redux';
 import { addPokemon } from '../store/slice';
 import { getPokemonByName } from '../requester/requester';
 import PokemonCard from '../components/PokemonCard';
+import Core from '../../../core/index';
+
+const { ModuleProvider } = Core.redux
+const { useModuleSelector } = Core.hooks
 
 export default function PokemonScreenContainer() {
   const [meta, setMeta] = useState(null);
 
   useEffect(() => {
-    (async () => {
-      const m = await registerPokemonModule();
-      setMeta(m);
-    })();
+      (async () => {
+        const m = await registerPokemonModule();
+        setMeta(m);
+      })();
   }, []);
 
   if (!meta) return <Text>Carregando módulo Pokémon...</Text>;

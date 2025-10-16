@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export default class HttpWrapper {
+export class HttpWrapper {
   /**
    * Cria um novo cliente HTTP isolado
    * @param {object} options - opções de configuração

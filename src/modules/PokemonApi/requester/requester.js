@@ -1,10 +1,13 @@
-import HttpWrapper from "../../../core/api/HttpWrapper";
+// import HttpWrapper from "../../../core/api/HttpWrapper";
+import Core from "../../../core";
+const HttpWrapper = Core.api.HttpWrapper
 
 const pokemonApi = new HttpWrapper({
   baseURL: "https://pokeapi.co/api/v2/",
 });
 
 export async function getPokemonByName(name) {
+  console.log(pokemonApi)
   try {
     const res = await pokemonApi.get(`https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`);
     console.log(`https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`, res)

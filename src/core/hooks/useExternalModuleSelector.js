@@ -1,6 +1,6 @@
 // src/core/hooks/useExternalModuleSelector.js
 import { useSelector } from 'react-redux';
-import ModuleRegistry from '../ModuleRegistry';
+import ModuleRegistry from '../redux/ModuleRegistry';
 
 export function useExternalModuleSelector(targetModuleId, providedKey, selectorFn) {
   const target = ModuleRegistry.getModule(targetModuleId);

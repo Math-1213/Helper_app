@@ -1,10 +1,11 @@
 import Realm from 'realm';
-import store from '../../../core/redux/Store';
-import { addDynamicModule } from '../../../core/redux/DynamicModuleManager';
 import { PokemonSchema } from '../schema/pokemonSchema';
 import pokemonReducer from './slice';
 import { setPokemons } from './slice';
-import KeyManager from '../../../core/security/KeyManager';
+import Core from '../../../core';
+
+const { addDynamicModule, store } = Core.redux
+const { KeyManager } = Core.security
 
 let realmInstance = null;
 
@@ -16,7 +17,7 @@ export async function registerPokemonModule() {
         author: 'Matheus',
     });
 
-    // 1️⃣ Abre Realm com schema do Pokémon
+    // Abre Realm com schema do Pokémon
     if (!realmInstance) {
         realmInstance = await Realm.open({
             path: 'pokemon.realm',
@@ -24,13 +25,13 @@ export async function registerPokemonModule() {
         });
     }
 
-    // 2️⃣ Injeta reducer no Redux dinamicamente
+    // Injeta reducer no Redux dinamicamente
     addDynamicModule(moduleId, moduleName, pokemonReducer, {
         moduleKey,
         description: 'Gerencia os dados dos pokemons buscados pela PokeAPI',
     });
 
-    // 3️⃣ Carrega dados persistidos do Realm e injeta no Redux
+    // Carrega dados persistidos do Realm e injeta no Redux
     const savedPokemons = realmInstance.objects('Pokemon').map(p => ({
         id: p.id,
         name: p.name,
