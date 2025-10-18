@@ -9,8 +9,7 @@ const pokemonApi = new HttpWrapper({
 export async function getPokemonByName(name) {
   console.log(pokemonApi)
   try {
-    const res = await pokemonApi.get(`https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`);
-    console.log(`https://pokeapi.co/api/v2/pokemon/${name.toLowerCase()}`, res)
+    const res = await pokemonApi.get(`pokemon/${name.toLowerCase()}`);
     return {
       id: res.data.id,
       name: res.data.name,

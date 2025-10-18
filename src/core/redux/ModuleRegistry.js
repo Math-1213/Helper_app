@@ -23,6 +23,10 @@ const ModuleRegistry = {
 
   setReducerRegistered(moduleId, flag = true) {
     if (this.modules[moduleId]) this.modules[moduleId].reducerRegistered = flag;
+  },
+
+  listModules() {
+    console.log("Modules: ", this.modules)
   }
 };
 
