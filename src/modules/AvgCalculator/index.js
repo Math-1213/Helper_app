@@ -1,7 +1,7 @@
-import TestScreen1 from './screens';
+import AvgSubjectsNavigator from './navigator';
 
 export const screens = {
-  Todo: TestScreen1,
+  "Calculadora de Médias": AvgSubjectsNavigator,
 };
 
 export const actions = {};

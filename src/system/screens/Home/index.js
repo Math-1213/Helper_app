@@ -1,24 +1,27 @@
 // modules/Home/screens/HomeScreen.js
 import React from 'react';
 import { View, Text, Button, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { screens } from '../../../modules';
 
 export default function HomeScreen({ navigation }) {
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Bem-vindo ao App!</Text>
-      <Text style={styles.subtitle}>Selecione um módulo:</Text>
+    <SafeAreaView>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Bem-vindo ao App!</Text>
+        <Text style={styles.subtitle}>Selecione um módulo:</Text>
 
-      {Object.keys(screens).map((moduleName) => (
-        <View key={moduleName} style={styles.buttonWrapper}>
-          <Button
-            title={moduleName}
-            onPress={() => navigation.navigate(moduleName)}
-            color="#6200EE"
-          />
-        </View>
-      ))}
-    </ScrollView>
+        {Object.keys(screens).map((moduleName) => (
+          <View key={moduleName} style={styles.buttonWrapper}>
+            <Button
+              title={moduleName}
+              onPress={() => navigation.navigate(moduleName)}
+              color="#6200EE"
+            />
+          </View>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

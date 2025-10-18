@@ -17,9 +17,9 @@ export default function Router() {
           contentStyle: { backgroundColor: "#1c1c1c" },
         }}
       >
-          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }}/>
         {Object.entries(screens).map(([name, component]) => (
-          <Stack.Screen key={name} name={name} component={component} />
+          <Stack.Screen key={name} name={name} component={component} options={{ headerShown: false }}/>
         ))}
       </Stack.Navigator>
     </NavigationContainer>

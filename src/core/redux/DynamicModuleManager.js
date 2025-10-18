@@ -10,7 +10,7 @@ import ModuleRegistry from './ModuleRegistry';
  */
 export function addDynamicModule(moduleId, moduleName, reducer, meta = {}) {
   if (!moduleId || !moduleName || typeof reducer !== 'function') {
-    throw new Error('addDynamicModule: parâmetros inválidos.');
+    throw new Error(`addDynamicModule: parâmetros inválidos. ${moduleId}, ${moduleName}, ${typeof reducer}`);
   }
 
   // verifica se já foi registrado
@@ -38,7 +38,7 @@ export function addDynamicModule(moduleId, moduleName, reducer, meta = {}) {
 }
 
 /**
- * Remove dinamicamente um módulo (caso queira descarregar).
+ * Remove dinamicamente um módulo 
  * @param {string} moduleId
  * @param {string} moduleName
  */
