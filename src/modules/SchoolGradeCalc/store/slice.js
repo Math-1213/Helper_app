@@ -25,7 +25,7 @@ const SubjectSlice = createSlice({
       if (index !== -1) {
         state.list[index] = { ...state.list[index], ...action.payload };
       } else {
-        console.log(action, state)
+        // console.log(action, state)
         console.warn(action.payload.id, state, 'Subject não encontrado para update');
       }
     }

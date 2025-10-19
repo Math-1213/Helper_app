@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -13,6 +13,7 @@ import { persistSubject } from '../store/register';
 import { useDispatch } from 'react-redux';
 import { updateSubject } from '../store/slice';
 import Core from '../../../core';
+import GradeRow from '../components/GradeRow';
 
 export default function EditContainer({ route }) {
     const subjectParam = route.params?.subject || { id: '', name: '', type: 'Normal', grades: [] };
@@ -22,7 +23,8 @@ export default function EditContainer({ route }) {
 function SubjectEditScreen({ initSubject }) {
     const dispatch = useDispatch();
     const navigation = useNavigation();
-    const subject = initSubject;
+    const [subject, setSubject] = useState(initSubject || null);
+    const [id, setId] = useState(initSubject?.id || -1);
     const [name, setName] = useState(initSubject?.name || '');
     const [type, setType] = useState(initSubject?.type || 'Normal');
     const [grades, setGrades] = useState(initSubject?.grades || []);
@@ -58,20 +60,18 @@ function SubjectEditScreen({ initSubject }) {
         setGrades(updated);
     };
 
-
-
     const handleSave = () => {
-        const updatedSubject = { ...subject, name, type, grades };
-        console.log('Salvando matéria:', updatedSubject);
+        const updatedSubject = { ...subject, id, name, type, grades };
+        console.log('Salvando matéria:', updatedSubject, subject);
+        try {
+            if (id < 0) throw new Error("Algo deu Errado!!");
 
-        dispatch(updateSubject(updatedSubject));
-        const currentState = Core.redux.store.getState();
-        console.log('State completo:', currentState);
-        console.log('Lista de subjects:', currentState.subject?.list);
-
-        persistSubject(updatedSubject)
-        navigation.goBack();
-
+            dispatch(updateSubject(updatedSubject));
+            persistSubject(updatedSubject)
+            navigation.goBack();
+        } catch (error) {
+            console.warn(error)
+        }
     };
 
     return (
@@ -123,39 +123,6 @@ function SubjectEditScreen({ initSubject }) {
                 <Text style={styles.saveText}>Salvar</Text>
             </TouchableOpacity>
         </SafeAreaView>
-    );
-}
-
-// Subcomponente para cada linha de nota
-function GradeRow({ grade, type, index, onRemove, onUpdate }) {
-    return (
-        <View style={styles.gradeRow}>
-            <TextInput
-                style={[styles.input, { flex: 1, marginRight: 8 }]}
-                value={grade.name}
-                placeholder="Nome"
-                onChangeText={(text) => onUpdate(index, 'name', text)}
-            />
-            <TextInput
-                style={[styles.input, { flex: 1, marginRight: 8 }]}
-                value={grade.value?.toString()}
-                placeholder="Nota"
-                keyboardType="numeric"
-                onChangeText={(text) => onUpdate(index, 'value', text)}
-            />
-            {type === 'Ponderada' && (
-                <TextInput
-                    style={[styles.input, { flex: 1, marginRight: 8 }]}
-                    value={grade.weight?.toString()}
-                    placeholder="Peso"
-                    keyboardType="numeric"
-                    onChangeText={(text) => onUpdate(index, 'weight', text)}
-                />
-            )}
-            <TouchableOpacity onPress={() => onRemove(index)}>
-                <Text style={{ color: 'red' }}>🗑</Text>
-            </TouchableOpacity>
-        </View>
     );
 }
 
