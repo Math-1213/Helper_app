@@ -13,7 +13,6 @@ export async function registerPokemonModule() {
     });
 
     const realm = await Core.realm.RealmManager.initModuleRealm(moduleId, [PokemonSchema], { moduleKey });
-    realmInstance = realm;
     Core.redux.addDynamicModule(moduleId, 'pokemon', pokemonReducer, { moduleKey });
 
     const saved = realm.objects('Pokemon').map(p => ({

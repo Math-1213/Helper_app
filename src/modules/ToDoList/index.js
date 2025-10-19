@@ -1,7 +1,7 @@
-import TestScreen2 from './screens';
+import PokemonScreenContainer from './screens/PokemonScreen';
 
 export const screens = {
-  Todo2: TestScreen2,
+  Pokemon: PokemonScreenContainer,
 };
 
 export const actions = {};

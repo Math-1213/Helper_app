@@ -1,21 +1,21 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import AvgEditScreenContainer from './screens/avgEditScreen'
-import AvgListScreenContainer from './screens/avgListScreen'
+import EditCountainer from './SubjectEdit'
+import ListContainer from './SubjectsList'
 
 const Stack = createNativeStackNavigator();
 
-export default function AvgSubjectsNavigator() {
+export default function GradeCalcRouter() {
   return (
     <Stack.Navigator>
       <Stack.Screen
-        name="AvgList"
-        component={AvgListScreenContainer}
+        name="SubjectList"
+        component={ListContainer}
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="AvgEdit"
-        component={AvgEditScreenContainer}
+        name="SubjectEdit"
+        component={EditCountainer}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

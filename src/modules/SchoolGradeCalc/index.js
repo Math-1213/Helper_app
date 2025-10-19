@@ -1,7 +1,7 @@
-import AvgSubjectsNavigator from './navigator';
+import ModRouter from './screens/ModRouter';
 
 export const screens = {
-  "Calculadora de Médias": AvgSubjectsNavigator,
+  "Calculadora de Médias": ModRouter,
 };
 
 export const actions = {};
