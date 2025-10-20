@@ -1,26 +1,34 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-const pokemonSlice = createSlice({
-  name: 'pokemon',
+const TodoListSlice = createSlice({
+  name: 'todolist', // chave usada no store
   initialState: {
-    list: [],
+    list: [], // array de listas { id, name, tasks: [{text, checked}] }
   },
   reducers: {
-    addPokemon: (state, action) => {
+    addList: (state, action) => {
       const exists = state.list.find(p => p.id === action.payload.id);
       if (!exists) state.list.push(action.payload);
     },
-    setPokemons: (state, action) => {
+    setLists: (state, action) => {
       state.list = action.payload;
     },
-    removePokemon: (state, action) => {
+    removeList: (state, action) => {
       state.list = state.list.filter(p => p.id !== action.payload);
     },
-    clearPokemon: (state) => {
+    clearLists: (state) => {
       state.list = [];
     },
+    updateList: (state, action) => {
+      const index = state.list.findIndex(p => p.id === action.payload.id);
+      if (index !== -1) {
+        state.list[index] = { ...state.list[index], ...action.payload };
+      } else {
+        console.warn('updateList: list not found', action.payload.id);
+      }
+    }
   },
 });
 
-export const { addPokemon, setPokemons, removePokemon, clearPokemon } = pokemonSlice.actions;
-export default pokemonSlice.reducer;
+export const { addList, setLists, removeList, clearLists, updateList } = TodoListSlice.actions;
+export default TodoListSlice.reducer;

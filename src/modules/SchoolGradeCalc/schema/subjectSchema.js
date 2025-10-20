@@ -11,6 +11,7 @@ export const SubjectSchema = {
 
 export const GradeSchema = {
   name: 'Grade',
+  embedded: true,
   properties: {
     name: 'string?',
     value: 'double?',

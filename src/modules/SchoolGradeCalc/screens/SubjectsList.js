@@ -27,7 +27,7 @@ export default function ListContainer() {
         })();
     }, []);
 
-    if (!meta) return <Text style={{ color: '#fff' }}>Carregando módulo Pokémon...</Text>;
+    if (!meta) return <Text style={{ color: '#fff' }}>Carregando módulo...</Text>;
 
     return (
         <ModuleProvider moduleId={meta.moduleId} moduleKey={meta.moduleKey}>
@@ -46,7 +46,7 @@ function SubjectListScreen({ realm }) {
         const nextId = subjects.length > 0
             ? Math.max(...subjects.map(s => parseInt(s.id))) + 1
             : 1;
-        
+
         const newSubject = {
             id: nextId,
             name: "",
@@ -57,7 +57,7 @@ function SubjectListScreen({ realm }) {
 
         dispatch(addSubject(newSubject));
         persistSubject(newSubject);
-        navigation.navigate('SubjectEdit', { subjectId: newSubject });
+        navigation.navigate('SubjectEdit', { subject: newSubject });
 
     }
 
