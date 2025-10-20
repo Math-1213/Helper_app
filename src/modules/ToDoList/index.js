@@ -1,7 +1,7 @@
-import PokemonScreenContainer from './screens/PokemonScreen';
+import ModRouter from './screens/ModRouter';
 
 export const screens = {
-  Pokemon: PokemonScreenContainer,
+  "Lista de Afazeres": ModRouter,
 };
 
 export const actions = {};

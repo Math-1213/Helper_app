@@ -1,39 +1,70 @@
 import Core from '../../../core';
-import { PokemonSchema } from '../schema/pokemonSchema';
-import pokemonReducer, { setPokemons } from './slice';
+import { TodoListSchema, TaskSchema } from '../schema/todoSchema';
+import todoReducer, { setLists } from './slice';
 
 let realmInstance = null;
-let moduleMeta = null;
 
-export async function registerPokemonModule() {
+export async function registerTodoListModule() {
     const { moduleId, moduleKey } = await Core.security.KeyManager.registerModule({
-        name: 'pokemon',
+        name: 'todolist',
         version: '1.0.0',
         author: 'Matheus',
     });
 
-    const realm = await Core.realm.RealmManager.initModuleRealm(moduleId, [PokemonSchema], { moduleKey });
-    Core.redux.addDynamicModule(moduleId, 'pokemon', pokemonReducer, { moduleKey });
+    const realm = await Core.realm.RealmManager.initModuleRealm(moduleId, [TodoListSchema, TaskSchema], { moduleKey });
+    realmInstance = realm;
 
-    const saved = realm.objects('Pokemon').map(p => ({
-        id: p.id,
-        name: p.name,
-        sprite: p.sprite,
-        type: p.type,
-        height: p.height,
-        weight: p.weight,
+    Core.redux.addDynamicModule(moduleId, 'todolist', todoReducer, { moduleKey });
+
+    const saved = realm.objects('TodoList').map(l => ({
+        id: l.id,
+        name: l.name,
+        tasks: l.tasks ? l.tasks.map(t => ({ text: t.text, checked: !!t.checked })) : [],
     }));
 
-    Core.redux.store.dispatch(setPokemons(saved));
+    Core.redux.store.dispatch(setLists(saved));
     return { moduleId, moduleKey, realm };
 }
 
+export function persistTodoList(list) {
+    if (!realmInstance) return;
+    const formatted = {
+        id: list.id,
+        name: list.name ?? '',
+        tasks: Array.isArray(list.tasks) ? list.tasks.map(t => ({
+            text: t.text ?? '',
+            checked: !!t.checked,
+        })) : [],
+    };
 
-export function persistPokemon(pokemon) {
+    realmInstance.write(() => {
+        realmInstance.create('TodoList', formatted, true);
+    });
+}
+
+export function deleteTodoListById(id) {
     if (!realmInstance) return;
 
     realmInstance.write(() => {
-        // Atualiza se existir, cria se não existir
-        realmInstance.create('Pokemon', pokemon, true);
+        const obj = realmInstance.objectForPrimaryKey('TodoList', id);
+        if (obj) realmInstance.delete(obj);
     });
+
+    // atualiza redux com o estado atual do realm (mais seguro)
+    const remaining = realmInstance.objects('TodoList').map(l => ({
+        id: l.id,
+        name: l.name,
+        tasks: l.tasks ? l.tasks.map(t => ({ text: t.text, checked: !!t.checked })) : [],
+    }));
+    Core.redux.store.dispatch(setLists(remaining));
+}
+
+// debug: limpa tudo
+export function clearRealmTodoLists() {
+    if (!realmInstance) return;
+    realmInstance.write(() => {
+        const all = realmInstance.objects('TodoList');
+        realmInstance.delete(all);
+    });
+    Core.redux.store.dispatch(setLists([]));
 }
