@@ -32,14 +32,15 @@ export default function SubjectCard({ subject, onPress }) {
         return finalAverage
     }
 
-    function getAllFilled(grades, type = 'Normal') {
+    function getAllFilled() {
         if (!grades || grades.length === 0) return false;
-
+        
         return grades.every(g => {
             const valueFilled = g.value !== null && g.value !== undefined && g.value !== '';
             const weightFilled = type === 'Ponderada' ? g.weight !== null && g.weight !== undefined && g.weight !== '' : true;
-
-            if(type = 'Ponderada') return valueFilled && weightFilled;
+            
+            console.log(grades, type, valueFilled, weightFilled)
+            if(type == 'Ponderada') return valueFilled && weightFilled;
             return valueFilled;
         });
     }
@@ -59,8 +60,7 @@ export default function SubjectCard({ subject, onPress }) {
         );
     }
 
-    // Exemplo de uso
-    let allFilled = getAllFilled(grades, type);
+    let allFilled = getAllFilled();
 
     return (
         <TouchableOpacity style={styles.card} onPress={onPress}>
@@ -69,7 +69,7 @@ export default function SubjectCard({ subject, onPress }) {
                 <Text style={styles.type}>{type || '—'}</Text>
             </View>
             <View style={styles.infoRow}>
-                <Text style={styles.info}>Média Final: {getFinalAvarage()}</Text>
+                <Text style={styles.info}>Média Final: {getFinalAvarage().toFixed(2)}</Text>
                 <Text style={[styles.info, { color: allFilled ? 'green' : 'orange' }]}>
                     {allFilled ? 'Completa' : 'Incompleta'}
                 </Text>

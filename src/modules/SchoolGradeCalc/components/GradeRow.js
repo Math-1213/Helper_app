@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     StyleSheet,
 } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export default function GradeRow({ grade, type, index, onRemove, onUpdate }) {
     return (
@@ -33,7 +34,7 @@ export default function GradeRow({ grade, type, index, onRemove, onUpdate }) {
                 />
             )}
             <TouchableOpacity onPress={() => onRemove(index)}>
-                <Text style={{ color: 'red' }}>🗑</Text>
+                <MaterialIcons name="delete" size={24} color="#fff" />
             </TouchableOpacity>
         </View>
     );

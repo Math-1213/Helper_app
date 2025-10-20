@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, Switch, StyleSheet } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export default function TaskRow({ item, index, onToggle, onUpdateText, onRemove }) {
     return (
@@ -13,7 +14,7 @@ export default function TaskRow({ item, index, onToggle, onUpdateText, onRemove 
                 placeholderTextColor="#777"
             />
             <TouchableOpacity onPress={() => onRemove(index)}>
-                <Text style={{ color: 'red', marginLeft: 8 }}>🗑</Text>
+                <MaterialIcons name="delete" size={24} color="#fff" />
             </TouchableOpacity>
         </View>
     );

@@ -49,19 +49,23 @@ function SubjectEditScreen({ initSubject }) {
 
     const handleUpdateGrade = (index, field, value) => {
         const updated = grades.map((g, i) => {
-            if (i !== index) return g; // mantém os outros
+            if (i !== index) return g;
             return {
-                ...g, // cria um clone do objeto
-                [field]: field === 'name'
-                    ? value
-                    : value === '' ? null : parseFloat(value)
+                ...g,
+                [field]: value // mantém como string
             };
         });
         setGrades(updated);
     };
 
     const handleSave = () => {
-        const updatedSubject = { ...subject, id, name, type, grades };
+        const numberGrades = grades.map(g => ({
+            name: g.name,
+            value: g.value ? parseFloat(g.value.toString().replace(',', '.')) : null,
+            weight: g.weight ? parseFloat(g.weight.toString().replace(',', '.')) : null
+        }));
+
+        const updatedSubject = { ...subject, id, name, type, grades:numberGrades };
         console.log('Salvando matéria:', updatedSubject, subject);
         try {
             if (id < 0) throw new Error("Algo deu Errado!!");

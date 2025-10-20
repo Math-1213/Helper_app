@@ -1,7 +1,7 @@
 import ModRouter from './screens/ModRouter';
 
 export const screens = {
-  "Lista de Afazeres": ModRouter,
+  "Lista de Tarefas": ModRouter,
 };
 
 export const actions = {};

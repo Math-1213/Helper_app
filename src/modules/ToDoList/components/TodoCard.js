@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export default function TodoListCard({ list, onPress, onDelete }) {
     const doneCount = (list.tasks || []).filter(t => t.checked).length;
@@ -14,7 +15,7 @@ export default function TodoListCard({ list, onPress, onDelete }) {
             <View style={styles.footer}>
                 <Text style={styles.info}>{total === 0 ? 'Sem tarefas' : `${doneCount} concluídas`}</Text>
                 <TouchableOpacity onPress={onDelete}>
-                    <Text style={styles.delete}>🗑️</Text>
+                    <MaterialIcons name="delete-forever" size={24} color="#fff" />
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
