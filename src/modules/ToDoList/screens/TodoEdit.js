@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -8,23 +8,34 @@ import {
     StyleSheet,
     Alert,
 } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useDispatch } from 'react-redux';
 import { updateList } from '../store/slice';
 import { persistTodoList } from '../store/register';
 import TaskRow from '../components/TaskRow';
+import { ListAPI } from '../requester/requester';
 
 export default function EditContainer() {
     const route = useRoute();
     const nav = useNavigation();
     const dispatch = useDispatch();
 
+    const api = new ListAPI();
     const init = route.params?.list || { id: -1, name: '', tasks: [] };
     const [id] = useState(init.id);
     const [name, setName] = useState(init.name || '');
     const [tasks, setTasks] = useState(init.tasks ? [...init.tasks] : []);
-    const [address, setAddress] = useState(''); // apenas ip:porta
+    const [address, setAddress] = useState('');
+
+    useEffect(() => {
+        (async () => {
+            const last = await api.getLastServer();
+            if (last) setAddress(last);
+        })();
+    }, []);
+
 
     const handleAddTask = () => setTasks([...tasks, { text: '', checked: false }]);
 
@@ -53,31 +64,13 @@ export default function EditContainer() {
             return;
         }
 
-        // Normaliza o endereço e monta o endpoint final
-        let cleanAddress = address.trim().toLowerCase();
-        cleanAddress = cleanAddress.replace(/^https?:\/\//, ''); // remove http:// ou https:// se o usuário digitar
+        const list = { id, name, tasks };
+        const result = await api.pushList(address, list);
 
-        const url = `http://${cleanAddress}/push`; // endpoint padrão
-        const payload = { name, tasks };
-
-        try {
-            const response = await fetch(url, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    id: id.toString(), // header com o ID
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const result = await response.json().catch(() => ({}));
-
+        if (result.success) {
             Alert.alert('Sucesso', 'Lista enviada com sucesso!');
-            console.log('Resposta do servidor:', result);
-        } catch (err) {
-            console.error(err);
-            Alert.alert('Falha no envio', 'Não foi possível enviar os dados. Verifique o IP e a porta.');
+        } else {
+            Alert.alert('Falha no envio', result.error || 'Não foi possível enviar os dados.');
         }
     };
 
@@ -127,7 +120,8 @@ export default function EditContainer() {
                 keyboardType="default"
             />
             <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-                <Text style={styles.sendText}>📤 Enviar Lista</Text>
+                <MaterialIcons name="send" size={22} color="#fff" />
+                <Text style={styles.sendText}>Enviar Lista</Text>
             </TouchableOpacity>
         </SafeAreaView>
     );
@@ -164,13 +158,21 @@ const styles = StyleSheet.create({
     },
     saveText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
     sendButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#ff9800',
         padding: 14,
         borderRadius: 8,
-        alignItems: 'center',
         marginTop: 12,
         elevation: 3,
     },
-    sendText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+    sendText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 15,
+        marginLeft: 8, 
+    },
+
     empty: { color: '#777', marginTop: 10, textAlign: 'center', fontStyle: 'italic' },
 });
