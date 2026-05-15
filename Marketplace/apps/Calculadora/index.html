@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calculadora Científica Pro</title>
+    <style>
+      :root {
+        --bg-color: #0f172a;
+        --calc-bg: #1e293b;
+        --btn-bg: #334155;
+        --btn-hover: #475569;
+        --accent: #38bdf8;
+        --accent-hover: #7dd3fc;
+        --text: #f8fafc;
+        --danger: #ef4444;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--text);
+      }
+
+      .calculator {
+        background-color: var(--calc-bg);
+        padding: 20px;
+        border-radius: 20px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        width: 350px;
+      }
+
+      #display {
+        width: 100%;
+        height: 60px;
+        background: #0f172a;
+        border: none;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        text-align: right;
+        padding: 10px 15px;
+        font-size: 1.5rem;
+        color: var(--accent);
+        box-sizing: border-box;
+        outline: none;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+      }
+
+      button {
+        height: 50px;
+        border: none;
+        border-radius: 8px;
+        background: var(--btn-bg);
+        color: var(--text);
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+      }
+
+      button:hover {
+        background: var(--btn-hover);
+        transform: translateY(-2px);
+      }
+
+      button.sci {
+        background: #1e293b;
+        color: var(--accent);
+        font-size: 0.9rem;
+        border: 1px solid #334155;
+      }
+
+      button.operator {
+        background: #0ea5e9;
+        color: white;
+      }
+
+      button.operator:hover {
+        background: var(--accent-hover);
+      }
+
+      button.equals {
+        grid-column: span 2;
+        background: #10b981;
+      }
+
+      button.clear {
+        background: var(--danger);
+      }
+
+      .history {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        text-align: right;
+        height: 20px;
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="calculator">
+      <div class="history" id="history"></div>
+      <input type="text" id="display" readonly placeholder="0" />
+
+      <div class="grid">
+        <button class="sci" onclick="insert('Math.sin(')">sin</button>
+        <button class="sci" onclick="insert('Math.cos(')">cos</button>
+        <button class="sci" onclick="insert('Math.tan(')">tan</button>
+        <button class="clear" onclick="clearDisplay()">AC</button>
+
+        <button class="sci" onclick="insert('Math.log10(')">log</button>
+        <button class="sci" onclick="insert('Math.PI')">π</button>
+        <button class="sci" onclick="insert('Math.E')">e</button>
+        <button class="operator" onclick="backspace()">⌫</button>
+
+        <button class="sci" onclick="insert('Math.pow(')">xʸ</button>
+        <button class="sci" onclick="insert('Math.sqrt(')">√</button>
+        <button class="sci" onclick="insert('**2')">x²</button>
+        <button class="operator" onclick="insert('/')">÷</button>
+
+        <button onclick="insert('7')">7</button>
+        <button onclick="insert('8')">8</button>
+        <button onclick="insert('9')">9</button>
+        <button class="operator" onclick="insert('*')">×</button>
+
+        <button onclick="insert('4')">4</button>
+        <button onclick="insert('5')">5</button>
+        <button onclick="insert('6')">6</button>
+        <button class="operator" onclick="insert('-')">−</button>
+
+        <button onclick="insert('1')">1</button>
+        <button onclick="insert('2')">2</button>
+        <button onclick="insert('3')">3</button>
+        <button class="operator" onclick="insert('+')">+</button>
+
+        <button onclick="insert('0')">0</button>
+        <button onclick="insert('.')">.</button>
+        <button class="equals" onclick="calculate()">=</button>
+
+        <button class="sci" onclick="insert('(')">(</button>
+        <button class="sci" onclick="insert(')')">)</button>
+        <button class="sci" onclick="insert(',')">,</button>
+        <button class="sci" onclick="insert('Math.exp(')">exp</button>
+      </div>
+    </div>
+
+    <script>
+      const display = document.getElementById("display");
+      const history = document.getElementById("history");
+
+      function insert(value) {
+        display.value += value;
+      }
+
+      function clearDisplay() {
+        display.value = "";
+        history.innerText = "";
+      }
+
+      function backspace() {
+        display.value = display.value.slice(0, -1);
+      }
+
+      function calculate() {
+        try {
+          let expression = display.value;
+          // Mostra a conta no histórico
+          history.innerText = expression;
+
+          // Avalia a expressão matemática
+          let result = eval(expression);
+
+          // Formata o resultado para evitar dízimas gigantes
+          if (!Number.isInteger(result)) {
+            result = parseFloat(result.toFixed(8));
+          }
+
+          display.value = result;
+        } catch (error) {
+          display.value = "Erro";
+          setTimeout(clearDisplay, 1500);
+        }
+      }
+
+      // Suporte a teclado físico
+      document.addEventListener("keydown", (e) => {
+        if (e.key >= "0" && e.key <= "9") insert(e.key);
+        if (e.key === "+") insert("+");
+        if (e.key === "-") insert("-");
+        if (e.key === "*") insert("*");
+        if (e.key === "/") insert("/");
+        if (e.key === "Enter") calculate();
+        if (e.key === "Backspace") backspace();
+        if (e.key === "Escape") clearDisplay();
+      });
+    </script>
+  </body>
+</html>

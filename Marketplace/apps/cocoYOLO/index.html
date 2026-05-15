@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YOLO Detector 🔍</title>
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <!-- coco-ssd -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        background: #111;
+        color: white;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .container {
+        position: relative;
+        display: inline-block;
+        border: 2px solid #444;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #222;
+        margin-top: 20px;
+      }
+      #image {
+        max-width: 90vw;
+        max-height: 70vh;
+        display: block;
+      }
+      #canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+      }
+      .status {
+        margin-top: 15px;
+        color: #00ff99;
+        font-weight: bold;
+        text-align: center;
+      }
+
+      button {
+        padding: 12px 24px;
+        background: #00ff99;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>YOLO Detector</h1>
+
+    <button onclick="requestFile()">Selecionar Imagem</button>
+
+    <div class="container">
+      <img id="image" />
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="status" id="status">Iniciando...</div>
+
+    <script>
+      const image = document.getElementById("image");
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      const statusText = document.getElementById("status");
+      let model;
+
+      // 1. Carregar o Modelo
+      async function loadModel() {
+        try {
+          statusText.innerText = "Carregando modelo... ⏳";
+          model = await cocoSsd.load();
+          statusText.innerText = "Modelo pronto ✅";
+        } catch (e) {
+          statusText.innerText = "Erro ao carregar modelo ❌";
+        }
+      }
+      loadModel();
+
+      // 2. Função para chamar a Bridge do React Native
+      function requestFile() {
+        const payload = {
+          module: "file",
+          action: "PICK_FILE",
+          params: {},
+        };
+
+        // Envia para o WebView do React Native
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+        } else {
+          console.log("Bridge não detectada");
+        }
+      }
+
+      // 3. Listener para receber a resposta da Bridge
+            const handleMessage = (event) => {
+        let response;
+        try {
+          response =
+            typeof event.data === "string"
+              ? JSON.parse(event.data)
+              : event.data;
+        } catch (e) {
+          console.error("Erro ao processar mensagem da Bridge:", e);
+          return;
+        }
+
+        console.log("Recebido da Bridge:", response);
+
+        if (response.module === "file" && response.type === "FILE_PICKED") {
+          const fileData = response.data;
+          const base64Source = `data:${fileData.type};base64,${fileData.base64}`;
+
+          statusText.innerText = "Imagem recebida! Processando...";
+          image.src = base64Source;
+        }
+      };
+
+      // Registrar nos dois lugares para garantir compatibilidade total
+      window.addEventListener("message", handleMessage);
+      document.addEventListener("message", handleMessage);
+
+      // 4. Lógica de Detecção (disparada quando a imagem carrega)
+      image.onload = async () => {
+        if (!model) return;
+
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        statusText.innerText = "Analisando... 🔎";
+
+        const predictions = await model.detect(image);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        predictions.forEach((prediction) => {
+          const [x, y, width, height] = prediction.bbox;
+          ctx.strokeStyle = "#00FF99";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x, y, width, height);
+
+          ctx.fillStyle = "#00FF99";
+          ctx.fillRect(x, y - 25, 120, 25);
+
+          ctx.fillStyle = "#000";
+          ctx.font = "16px Arial";
+          const confidence = (prediction.score * 100).toFixed(1);
+          ctx.fillText(`${prediction.class} ${confidence}%`, x + 5, y - 7);
+        });
+
+        statusText.innerText = `Detectados: ${predictions.length}`;
+      };
+    </script>
+  </body>
+</html>
