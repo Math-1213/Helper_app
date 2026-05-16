@@ -1,15 +1,13 @@
 import os
-from flask import Flask, jsonify, send_from_directory, abort, send_file
 import zipfile
 from io import BytesIO
+from flask import Flask, jsonify, send_from_directory, abort, send_file, request
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
 APPS_DIR = "C:/Users/math1/Projetos/Helper 2/Marketplace/apps"
-HOST = "192.168.1.102"
 PORT = 3000
-
 
 def get_title(index_path):
     try:
@@ -20,13 +18,15 @@ def get_title(index_path):
     except:
         return "Unnamed App"
 
-
 @app.route("/apps.json")
 def list_apps():
     apps = []
 
     if not os.path.exists(APPS_DIR):
         return jsonify([])
+
+    # 🔥 Pega o IP e Porta que o app usou para chamar a requisição atual (ex: 192.168.1.102:3000)
+    current_host = request.host
 
     for folder in os.listdir(APPS_DIR):
         app_path = os.path.join(APPS_DIR, folder)
@@ -40,30 +40,24 @@ def list_apps():
                 apps.append({
                     "id": folder,
                     "label": title,
-                    "url": f"http://{HOST}:{PORT}/apps/{folder}/download"
+                    # 🔥 Agora o link muda dinamicamente dependendo de qual IP o celular chamou
+                    "url": f"http://{current_host}/apps/{folder}/download"
                 })
 
     return jsonify(apps)
 
-
 @app.route("/apps/<app_id>/")
 def serve_index(app_id):
     app_path = os.path.join(APPS_DIR, app_id)
-
     if not os.path.exists(app_path):
         abort(404)
-
     return send_from_directory(app_path, "index.html")
-
 
 @app.route("/apps/<app_id>/<path:file>")
 def serve_files(app_id, file):
     app_path = os.path.join(APPS_DIR, app_id)
-
     if not os.path.exists(os.path.join(app_path, file)):
-        # 🔥 fallback para SPA (React, etc.)
         return send_from_directory(app_path, "index.html")
-
     return send_from_directory(app_path, file)
 
 @app.route("/apps/<app_id>/download")
@@ -79,10 +73,7 @@ def download_app(app_id):
         for root, dirs, files in os.walk(app_path):
             for file in files:
                 full_path = os.path.join(root, file)
-
-                # caminho relativo dentro do zip
                 rel_path = os.path.relpath(full_path, app_path)
-
                 z.write(full_path, rel_path)
 
     memory_file.seek(0)
@@ -93,8 +84,6 @@ def download_app(app_id):
         as_attachment=True
     )
 
-
 if __name__ == "__main__":
-    app.run(host=HOST, port=PORT, debug=True)
-
-    
+    # 🔥 host="0.0.0.0" abre o servidor no Wi-Fi, no Cabo e no localhost ao mesmo tempo
+    app.run(host="0.0.0.0", port=PORT, debug=True)
