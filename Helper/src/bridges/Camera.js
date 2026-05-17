@@ -1,0 +1,152 @@
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+  useState,
+  useEffect,
+} from 'react';
+import { View, StyleSheet, Linking } from 'react-native';
+import {
+  Camera,
+  useCameraDevice,
+  useCameraFormat,
+} from 'react-native-vision-camera';
+import RNFS from 'react-native-fs';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
+
+const CameraBridge = forwardRef(({ sendToWebView }, ref) => {
+  const device = useCameraDevice('back');
+
+  const format = useCameraFormat(device, [
+    { videoResolution: { width: 640, height: 480 } },
+    { fps: 20 },
+  ]);
+
+  const camera = useRef(null);
+  const [isActive, setIsActive] = useState(false);
+  const [streaming, setStreaming] = useState(false);
+
+  useEffect(() => {
+    const requestCameraPermission = async () => {
+      const permission = await Camera.requestCameraPermission();
+      if (permission === 'denied') await Linking.openSettings();
+    };
+    requestCameraPermission();
+  }, []);
+
+  // Loop de streaming otimizado
+  useEffect(() => {
+    let interval;
+    if (streaming && isActive) {
+      interval = setInterval(async () => {
+        try {
+          if (camera.current) {
+            // Snapshot é pesado. Para stream em JS, baixamos a qualidade ao máximo
+            const snapshot = await camera.current.takeSnapshot({
+              quality: 10,
+              skipMetadata: true,
+            });
+
+            const base64 = await RNFS.readFile(snapshot.path, 'base64');
+            sendToWebView({
+              module: 'camera',
+              type: 'FRAME',
+              data: `data:image/jpeg;base64,${base64}`,
+            });
+
+            await RNFS.unlink(snapshot.path);
+          }
+        } catch (err) {
+          // Ignora erros de frame individual para não travar o loop
+        }
+      }, 200); // 5 FPS é o limite seguro para Bridge JS + Base64
+    }
+    return () => clearInterval(interval);
+  }, [streaming, isActive]);
+
+  useImperativeHandle(ref, () => ({
+    START_STREAM() {
+      console.log('CameraBridge', 'START_STREAM');
+      setIsActive(true);
+      setStreaming(true);
+    },
+    STOP_STREAM() {
+      console.log('CameraBridge', 'STOP_STREAM');
+      setStreaming(false);
+      setIsActive(false);
+    },
+    async TAKE_PHOTO(params) {
+      console.log('CameraBridge', 'TAKE_PHOTO', params);
+      // Validação: Se não houver isActive (ou device pronto), avisa o usuário
+      if (!isActive || !camera.current) {
+        sendToWebView({
+          module: 'camera',
+          type: 'ERROR',
+          message: 'A stream precisa estar ativa para capturar uma foto.',
+        });
+        return;
+      }
+
+      try {
+        const photo = await camera.current.takePhoto({
+          qualityPrioritization: 'quality',
+          flash: params?.flash || 'off',
+        });
+
+        if (params?.saveToGallery !== false) {
+          // Salva por padrão
+          await CameraRoll.saveAsset(`file://${photo.path}`, { type: 'photo' });
+          console.log('PHOTO PATH ON GALLERY', photo.path);
+        }
+
+        const base64 = await RNFS.readFile(photo.path, 'base64');
+        sendToWebView({
+          module: 'camera',
+          type: 'PHOTO_RESULT',
+          data: `data:image/jpeg;base64,${base64}`,
+        });
+        await RNFS.unlink(photo.path);
+      } catch (err) {
+        console.error('Erro ao tirar foto:', err);
+      }
+    },
+  }));
+
+  if (!device) return null;
+
+  return (
+    <View style={styles.container}>
+      <Camera
+        ref={camera}
+        style={StyleSheet.absoluteFill}
+        device={device}
+        isActive={isActive}
+        format={format}
+        photo={true}
+        preview={true}
+        video={true}
+      />
+    </View>
+  );
+});
+
+const styles = StyleSheet.create({
+  hiddenCamera: {
+    position: 'absolute',
+    left: -1000, // Move para longe da visão do usuário
+    width: 640,
+    height: 480,
+    opacity: 0,
+  },
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: -1000,
+    width: 640,
+    height: 480,
+    zIndex: -1,
+    opacity: 1,
+  },
+});
+
+export default CameraBridge;

@@ -1,0 +1,346 @@
+import React, { useRef } from 'react';
+import styled from 'styled-components/native';
+import { WebView } from 'react-native-webview';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { handleBridgeMessage } from '../../bridges';
+import { StatusBar } from 'react-native';
+
+// Bridges
+import CameraBridge from '../../bridges/Camera';
+import SensorBridge from '../../bridges/Sensors';
+import FileBridge from '../../bridges/Files'
+import MicrophoneBridge from '../../bridges/Audio'
+import LocationBridge from '../../bridges/Location'
+import StorageBridge from '../../bridges/Storage'
+import ConsoleBridge from '../../bridges/Console';
+
+const testHtml = `
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buscar Endereço por Coordenadas</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0f172a;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 600px;
+        background: #1e293b;
+        border-radius: 18px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+
+      h1 {
+        margin-top: 0;
+        font-size: 28px;
+        text-align: center;
+      }
+
+      .subtitle {
+        text-align: center;
+        color: #94a3b8;
+        margin-bottom: 25px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      label {
+        font-size: 14px;
+        color: #cbd5e1;
+      }
+
+      input {
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: #334155;
+        color: white;
+        font-size: 15px;
+      }
+
+      input:focus {
+        outline: 2px solid #38bdf8;
+      }
+
+      .full {
+        grid-column: 1 / -1;
+      }
+
+      button {
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      .btn-primary {
+        background: #38bdf8;
+        color: #0f172a;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+      }
+
+      .btn-location {
+        background: #22c55e;
+        color: white;
+        margin-top: 10px;
+      }
+
+      .btn-location:hover {
+        transform: translateY(-2px);
+      }
+
+      .result {
+        margin-top: 20px;
+        background: #334155;
+        padding: 18px;
+        border-radius: 12px;
+        line-height: 1.7;
+        white-space: pre-line;
+      }
+
+      .loading {
+        color: #facc15;
+      }
+
+      .error {
+        color: #f87171;
+      }
+
+      @media (max-width: 600px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>📍 Localizador de Endereço</h1>
+      <p class="subtitle">
+        Digite latitude e longitude ou use sua localização atual
+      </p>
+
+      <div class="grid">
+        <div class="field">
+          <label>Latitude</label>
+          <input type="text" id="latitude" placeholder="-23.550520" />
+        </div>
+
+        <div class="field">
+          <label>Longitude</label>
+          <input type="text" id="longitude" placeholder="-46.633308" />
+        </div>
+
+        <div class="field full">
+          <button class="btn-primary" onclick="buscarEndereco()">
+            Buscar Endereço
+          </button>
+
+          <button class="btn-location" onclick="usarLocalizacao()">
+            📡 Usar Minha Localização
+          </button>
+        </div>
+      </div>
+
+      <div id="resultado" class="result">Nenhuma busca realizada ainda.</div>
+    </div>
+
+    <script>
+      // 1. Função para buscar o endereço via API (Sem mudanças aqui)
+      async function buscarEndereco() {
+        const lat = document.getElementById("latitude").value.trim();
+        const lon = document.getElementById("longitude").value.trim();
+        const resultado = document.getElementById("resultado");
+
+        if (!lat || !lon) {
+          resultado.innerHTML =
+            "<span class='error'>Preencha latitude e longitude.</span>";
+          return;
+        }
+
+        resultado.innerHTML =
+          "<span class='loading'>🔎 Buscando endereço...</span>";
+
+        try {
+          // Nota: Adicionei um User-Agent ou referer se necessário,
+          // mas para testes simples o fetch direto costuma funcionar.
+          const response = await fetch(
+            \`https://nominatim.openstreetmap.org/reverse?format=json&lat=\${lat}&lon=\${lon}&addressdetails=1\`,
+          );
+
+          const data = await response.json();
+
+          if (!data || !data.address) {
+            resultado.innerHTML =
+              "<span class='error'>Endereço não encontrado.</span>";
+            return;
+          }
+
+          const address = data.address;
+          resultado.innerHTML = \`
+📍 <strong>Endereço:</strong>\n\${data.display_name || "Não encontrado"}
+
+📮 <strong>CEP:</strong>\n\${address.postcode || "Não encontrado"}
+
+🏙️ <strong>Cidade:</strong>\n\${address.city || address.town || address.village || "Não encontrada"}
+
+🗺️ <strong>Estado:</strong>\n\${address.state || "Não encontrado"}
+
+🌎 <strong>País:</strong>\n\${address.country || "Não encontrado"}
+      \`;
+        } catch (error) {
+          resultado.innerHTML = \`<span class='error'>Erro ao buscar endereço: \${error.message}</span>\`;
+        }
+      }
+
+      // 2. FUNÇÃO ADAPTADA: Chama a Bridge em vez do navegador
+      function usarLocalizacao() {
+        const resultado = document.getElementById("resultado");
+        resultado.innerHTML =
+          "<span class='loading'>📡 Solicitando localização ao dispositivo...</span>";
+
+        const payload = {
+          module: "location",
+          action: "GET_CURRENT_LOCATION",
+          params: {},
+        };
+
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+        } else {
+          resultado.innerHTML =
+            "<span class='error'>Erro: Bridge não detectada.</span>";
+        }
+      }
+
+      // 3. LISTENER: Recebe os dados vindos do React Native
+      const handleMessage = (event) => {
+        let response;
+        try {
+          response =
+            typeof event.data === "string"
+              ? JSON.parse(event.data)
+              : event.data;
+        } catch (e) {
+          return;
+        }
+
+        // Verifica se a mensagem é do módulo de localização
+        if (response.module === "location") {
+          const resultado = document.getElementById("resultado");
+
+          if (response.type === "LOCATION_DATA") {
+            const { latitude, longitude } = response.data;
+
+            document.getElementById("latitude").value = latitude;
+            document.getElementById("longitude").value = longitude;
+
+            // Após preencher, dispara a busca do endereço automaticamente
+            buscarEndereco();
+          } else if (response.type === "ERROR") {
+            resultado.innerHTML = \`<span class='error'>Erro na Bridge: \${response.message}</span>\`;
+          }
+        }
+      };
+
+      // Registrar listeners para máxima compatibilidade
+      window.addEventListener("message", handleMessage);
+      document.addEventListener("message", handleMessage);
+    </script>
+  </body>
+</html>
+
+
+`;
+
+export default function LabScreen() {
+  const insets = useSafeAreaInsets();
+  const webviewRef = useRef(null);
+  
+  const bridgeRefs = {
+    camera: useRef(null),
+    sensors: useRef(null),
+    file: useRef(null),
+    mic: useRef(null),
+    location: useRef(null),
+    storage: useRef(null),
+    console: useRef(null),
+  };
+
+  const sendToWebView = (payload) => {
+    console.log("Sending do webviwe: ", payload)
+    webviewRef.current?.postMessage(JSON.stringify(payload));
+  };
+
+  return (
+    <Container>
+
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      
+      {/* Bridges */}
+      <CameraBridge ref={bridgeRefs.camera} sendToWebView={sendToWebView} />
+      <SensorBridge ref={bridgeRefs.sensors} sendToWebView={sendToWebView} />
+      <FileBridge ref={bridgeRefs.file} sendToWebView={sendToWebView} />
+      <MicrophoneBridge ref={bridgeRefs.mic} sendToWebView={sendToWebView} />
+      <LocationBridge ref={bridgeRefs.location} sendToWebView={sendToWebView} />
+      <StorageBridge ref={bridgeRefs.storage} sendToWebView={sendToWebView} />
+      <ConsoleBridge ref={bridgeRefs.console} sendToWebView={sendToWebView} />
+
+      <WebViewContent top={insets.top}>
+        <WebView
+          ref={webviewRef}
+          originWhitelist={['*']}
+          source={{ html: testHtml }} // Carrega o código interno
+          onMessage={(e) => handleBridgeMessage(e, bridgeRefs, sendToWebView)}
+          style={{ flex: 1, backgroundColor: 'transparent', marginBottom: insets.bottom + 20 }}
+          javaScriptEnabled
+        />
+      </WebViewContent>
+    </Container>
+  );
+}
+
+const Container = styled.View`
+  flex: 1;
+  background-color: #0f0f0f;
+`;
+
+const WebViewContent = styled.View`
+  flex: 1;
+  padding-top: ${props => props.top || 0}px;
+`;
