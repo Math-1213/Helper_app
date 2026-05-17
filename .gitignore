@@ -1,2 +1,70 @@
-./Espelhamento/
+Espelhamento/
 Apps\ de\ Teste/
+
+###### React App
+
+# OSX
+.DS_Store
+
+# Xcode
+Helper/build/
+Helper/*.pbxuser
+Helper/!default.pbxuser
+Helper/*.mode1v3
+Helper/!default.mode1v3
+Helper/*.mode2v3
+Helper/!default.mode2v3
+Helper/*.perspectivev3
+Helper/!default.perspectivev3
+Helper/xcuserdata
+Helper/*.xccheckout
+Helper/*.moved-aside
+Helper/DerivedData
+Helper/*.hmap
+Helper/*.ipa
+Helper/*.xcuserstate
+Helper/**/.xcode.env.local
+
+# Android/IntelliJ
+Helper/build/
+Helper/.idea
+Helper/.gradle
+Helper/local.properties
+Helper/*.iml
+Helper/*.hprof
+Helper/.cxx/
+Helper/*.keystore
+Helper/!debug.keystore
+Helper/.kotlin/
+
+# node.js
+Helper/node_modules/
+Helper/npm-debug.log
+Helper/yarn-error.log
+
+# fastlane
+Helper/**/fastlane/report.xml
+Helper/**/fastlane/Preview.html
+Helper/**/fastlane/screenshots
+Helper/**/fastlane/test_output
+
+# Bundle artifact
+Helper/*.jsbundle
+
+# Ruby / CocoaPods
+Helper/**/Pods/
+Helper/vendor/bundle/
+
+# Temporary files created by Metro to check the health of the file watcher
+Helper/.metro-health-check*
+
+# testing
+Helper/coverage
+
+# Yarn
+Helper/.yarn/*
+Helper/!.yarn/patches
+Helper/!.yarn/plugins
+Helper/!.yarn/releases
+Helper/!.yarn/sdks
+Helper/!.yarn/versions
