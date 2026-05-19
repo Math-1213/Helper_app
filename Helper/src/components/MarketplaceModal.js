@@ -35,12 +35,11 @@ export default function MarketplaceModal({
       setLoading(true);
 
       // Usando apenas o endpoint relativo. O Axios prefixará automaticamente a baseURL salva
-      const response = await api.get(Config.MARKETPLACE_APPS_ENDPOINT);
+      const response = await api.get("/apps.json");
 
       setApps(response.data);
     } catch (err) {
       console.log('Erro carregando marketplace');
-      console.log('ENDPOINT:', Config.MARKETPLACE_APPS_ENDPOINT);
       console.log(err.message);
     } finally {
       setLoading(false);

@@ -5,61 +5,42 @@ import React, {
   useState,
   useEffect,
 } from 'react';
-import { View, StyleSheet, Linking } from 'react-native';
-import {
-  Camera,
-  useCameraDevice,
-  useCameraFormat,
-} from 'react-native-vision-camera';
+import { View, StyleSheet, Alert } from 'react-native';
+import { Camera, CameraApi } from 'react-native-camera-kit';
 import RNFS from 'react-native-fs';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 
 const CameraBridge = forwardRef(({ sendToWebView }, ref) => {
-  const device = useCameraDevice('back');
-
-  const format = useCameraFormat(device, [
-    { videoResolution: { width: 640, height: 480 } },
-    { fps: 20 },
-  ]);
-
   const camera = useRef(null);
   const [isActive, setIsActive] = useState(false);
   const [streaming, setStreaming] = useState(false);
 
-  useEffect(() => {
-    const requestCameraPermission = async () => {
-      const permission = await Camera.requestCameraPermission();
-      if (permission === 'denied') await Linking.openSettings();
-    };
-    requestCameraPermission();
-  }, []);
-
-  // Loop de streaming otimizado
+  // Loop de streaming simulado via Snapshot
   useEffect(() => {
     let interval;
     if (streaming && isActive) {
       interval = setInterval(async () => {
         try {
           if (camera.current) {
-            // Snapshot é pesado. Para stream em JS, baixamos a qualidade ao máximo
-            const snapshot = await camera.current.takeSnapshot({
-              quality: 10,
-              skipMetadata: true,
-            });
-
-            const base64 = await RNFS.readFile(snapshot.path, 'base64');
+            // Captura uma imagem rápida do preview com qualidade reduzida
+            const snapshot = await camera.current.capture({});
+            
+            // O CameraKit retorna o caminho em 'uri'
+            const base64 = await RNFS.readFile(snapshot.uri, 'base64');
+            
             sendToWebView({
               module: 'camera',
               type: 'FRAME',
               data: `data:image/jpeg;base64,${base64}`,
             });
 
-            await RNFS.unlink(snapshot.path);
+            // Limpa o arquivo gerado temporariamente
+            await RNFS.unlink(snapshot.uri);
           }
         } catch (err) {
-          // Ignora erros de frame individual para não travar o loop
+          // Ignora falhas pontuais no loop de frames
         }
-      }, 200); // 5 FPS é o limite seguro para Bridge JS + Base64
+      }, 200); // 5 FPS seguro para a bridge
     }
     return () => clearInterval(interval);
   }, [streaming, isActive]);
@@ -77,7 +58,7 @@ const CameraBridge = forwardRef(({ sendToWebView }, ref) => {
     },
     async TAKE_PHOTO(params) {
       console.log('CameraBridge', 'TAKE_PHOTO', params);
-      // Validação: Se não houver isActive (ou device pronto), avisa o usuário
+      
       if (!isActive || !camera.current) {
         sendToWebView({
           module: 'camera',
@@ -88,64 +69,53 @@ const CameraBridge = forwardRef(({ sendToWebView }, ref) => {
       }
 
       try {
-        const photo = await camera.current.takePhoto({
-          qualityPrioritization: 'quality',
-          flash: params?.flash || 'off',
-        });
+        // Tira a foto em alta qualidade
+        const photo = await camera.current.capture({});
 
         if (params?.saveToGallery !== false) {
-          // Salva por padrão
-          await CameraRoll.saveAsset(`file://${photo.path}`, { type: 'photo' });
-          console.log('PHOTO PATH ON GALLERY', photo.path);
+          await CameraRoll.saveAsset(photo.uri, { type: 'photo' });
+          console.log('PHOTO PATH ON GALLERY', photo.uri);
         }
 
-        const base64 = await RNFS.readFile(photo.path, 'base64');
+        const base64 = await RNFS.readFile(photo.uri, 'base64');
         sendToWebView({
           module: 'camera',
           type: 'PHOTO_RESULT',
           data: `data:image/jpeg;base64,${base64}`,
         });
-        await RNFS.unlink(photo.path);
+
+        await RNFS.unlink(photo.uri);
       } catch (err) {
         console.error('Erro ao tirar foto:', err);
       }
     },
   }));
 
-  if (!device) return null;
+  // Se a câmera não estiver ativa, não renderiza para poupar recursos
+  if (!isActive) return null;
 
   return (
     <View style={styles.container}>
       <Camera
         ref={camera}
         style={StyleSheet.absoluteFill}
-        device={device}
-        isActive={isActive}
-        format={format}
-        photo={true}
-        preview={true}
-        video={true}
+        cameraType="back"
+        flashMode={ "auto" }
+        resetFocusTimeout={0}
+        resetFocusWhenMotionDetected={false}
       />
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  hiddenCamera: {
-    position: 'absolute',
-    left: -1000, // Move para longe da visão do usuário
-    width: 640,
-    height: 480,
-    opacity: 0,
-  },
   container: {
     position: 'absolute',
     top: 0,
-    left: -1000,
+    left: -1000, // Mantém escondido fora da tela conforme seu design original
     width: 640,
     height: 480,
     zIndex: -1,
-    opacity: 1,
   },
 });
 

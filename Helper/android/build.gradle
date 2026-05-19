@@ -19,32 +19,3 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
-
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    buildscript {
-        repositories {
-            google()
-            mavenCentral()
-        }
-    }
-}
-subprojects {
-    project.configurations.all {
-        resolutionStrategy.eachDependency { details ->
-        }
-    }
-    repositories {
-        handler ->
-            handler.all {
-                repository ->
-                    if (repository instanceof MavenArtifactRepository && repository.url.toString().contains("jcenter")) {
-                        println "Removendo jcenter de ${project.name}"
-                        handler.remove(repository)
-                    }
-            }
-    }
-}

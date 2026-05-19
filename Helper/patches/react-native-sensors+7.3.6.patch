@@ -1,8 +1,8 @@
 diff --git a/node_modules/react-native-sensors/android/build.gradle b/node_modules/react-native-sensors/android/build.gradle
-index f1526ec..9997a43 100644
+index f1526ec..e7ea93f 100644
 --- a/node_modules/react-native-sensors/android/build.gradle
 +++ b/node_modules/react-native-sensors/android/build.gradle
-@@ -6,13 +6,11 @@ def safeExtGet(prop, fallback) {
+@@ -6,13 +6,12 @@ def safeExtGet(prop, fallback) {
  repositories {
    mavenCentral()
    google()
@@ -13,6 +13,7 @@ index f1526ec..9997a43 100644
      repositories {
          google()
 -        jcenter()
++        mavenCentral()
      }
  
      dependencies {
