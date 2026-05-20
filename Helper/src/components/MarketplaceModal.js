@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import RNFS from 'react-native-fs';
-import Config from 'react-native-config';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import api from '../bridges/Marketplace';
 import { unzip } from 'react-native-zip-archive';
@@ -35,11 +34,12 @@ export default function MarketplaceModal({
       setLoading(true);
 
       // Usando apenas o endpoint relativo. O Axios prefixará automaticamente a baseURL salva
-      const response = await api.get("/apps.json");
+      const response = await api.get("apps.json");
 
       setApps(response.data);
     } catch (err) {
       console.log('Erro carregando marketplace');
+      console.log('ENDPOINT:', "127.0.0.1:3333");
       console.log(err.message);
     } finally {
       setLoading(false);

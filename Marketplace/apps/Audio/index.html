@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Mic Test</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        background: #0f0f0f;
+        color: white;
+        font-family: Arial;
+        overflow-x: hidden;
+      }
+
+      .screen {
+        width: 100%;
+        min-height: 100vh;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .active {
+        display: flex;
+      }
+
+      button {
+        padding: 14px 24px;
+        margin: 10px;
+        border: none;
+        border-radius: 12px;
+        background: #ff4444;
+        color: white;
+        font-size: 16px;
+      }
+
+      h1 {
+        margin-bottom: 20px;
+      }
+
+      #playerScreen {
+        justify-content: flex-start;
+        padding-top: 40px;
+      }
+
+      audio {
+        margin-top: 20px;
+        width: 90%;
+      }
+
+      canvas {
+        margin-top: 30px;
+        border: 2px solid #222;
+        border-radius: 12px;
+      }
+
+      #status {
+        color: #aaa;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ===================== -->
+    <!-- TELA DE GRAVAÇÃO -->
+    <!-- ===================== -->
+
+    <div id="recordScreen" class="screen active">
+      <h1>🎙️ Gravador</h1>
+
+      <button onclick="startRecording()">Iniciar Gravação</button>
+
+      <button onclick="stopRecording()">Parar Gravação</button>
+
+      <div id="status">Aguardando...</div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- TELA PLAYER -->
+    <!-- ===================== -->
+
+    <div id="playerScreen" class="screen">
+      <h1>🎧 Reprodução</h1>
+
+      <audio id="audioPlayer" controls></audio>
+
+      <div id="visualizer"></div>
+    </div>
+
+    <script>
+      // =====================================
+      // VARIÁVEIS
+      // =====================================
+
+      let audioElement;
+      let audioContext;
+      let analyser;
+      let source;
+      let dataArray;
+
+      // =====================================
+      // P5
+      // =====================================
+
+      let sketch = (p) => {
+        p.setup = () => {
+          const canvas = p.createCanvas(700, 250);
+
+          canvas.parent("visualizer");
+        };
+
+        p.draw = () => {
+          p.background(15);
+
+          if (!analyser) return;
+
+          analyser.getByteFrequencyData(dataArray);
+
+          const barWidth = p.width / dataArray.length;
+
+          for (let i = 0; i < dataArray.length; i++) {
+            const value = dataArray[i];
+
+            const h = p.map(value, 0, 255, 0, p.height);
+
+            const x = i * barWidth;
+
+            const hue = p.map(i, 0, dataArray.length, 0, 255);
+
+            p.fill(hue, 255, 255);
+
+            p.noStroke();
+
+            p.rect(x, p.height - h, barWidth - 2, h);
+          }
+        };
+      };
+
+      new p5(sketch);
+
+      // =====================================
+      // COMUNICAÇÃO WEBVIEW
+      // =====================================
+
+      function sendToApp(data) {
+        const payload = JSON.stringify(data);
+
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(payload);
+        }
+
+        console.log("SEND:", payload);
+      }
+
+      // =====================================
+      // AÇÕES
+      // =====================================
+
+      function startRecording() {
+        setStatus("Gravando... 🎙️");
+
+        sendToApp({
+          module: "mic",
+          action: "START_RECORDING",
+          params: {},
+        });
+      }
+
+      function stopRecording() {
+        setStatus("Finalizando gravação...");
+
+        sendToApp({
+          module: "mic",
+          action: "STOP_RECORDING",
+          params: {},
+        });
+      }
+
+      // =====================================
+      // RECEBER EVENTOS
+      // =====================================
+
+      window.addEventListener("message", receiveMessage);
+      document.addEventListener("message", receiveMessage);
+
+      function receiveMessage(event) {
+        try {
+          const msg =
+            typeof event.data === "string"
+              ? JSON.parse(event.data)
+              : event.data;
+
+          console.log("RECEIVED:", msg);
+
+          // =====================
+          // STARTED
+          // =====================
+
+          if (msg.module === "mic" && msg.type === "RECORDING_STARTED") {
+            setStatus("Gravando áudio...");
+          }
+
+          // =====================
+          // STOPPED
+          // =====================
+
+          if (msg.module === "mic" && msg.type === "RECORDING_STOPPED") {
+            openPlayerScreen(msg.uri);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // =====================================
+      // TROCAR DE TELA
+      // =====================================
+
+      function openPlayerScreen(audioUri) {
+        document.getElementById("recordScreen").classList.remove("active");
+
+        document.getElementById("playerScreen").classList.add("active");
+
+        audioElement = document.getElementById("audioPlayer");
+
+        audioElement.src = audioUri;
+
+        setupVisualizer();
+      }
+
+      // =====================================
+      // VISUALIZADOR
+      // =====================================
+
+      function setupVisualizer() {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        analyser = audioContext.createAnalyser();
+
+        analyser.fftSize = 256;
+
+        const bufferLength = analyser.frequencyBinCount;
+
+        dataArray = new Uint8Array(bufferLength);
+
+        source = audioContext.createMediaElementSource(audioElement);
+
+        source.connect(analyser);
+
+        analyser.connect(audioContext.destination);
+
+        audioElement.onplay = async () => {
+          if (audioContext.state === "suspended") {
+            await audioContext.resume();
+          }
+        };
+      }
+
+      // =====================================
+      // STATUS
+      // =====================================
+
+      function setStatus(text) {
+        document.getElementById("status").innerText = text;
+      }
+    </script>
+  </body>
+</html>

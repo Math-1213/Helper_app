@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Night Vision Test</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: black;
+        font-family: Arial;
+      }
+
+      #ui {
+        position: absolute;
+        z-index: 20;
+        top: 20px;
+        left: 20px;
+      }
+
+      button {
+        padding: 14px 20px;
+        margin-right: 10px;
+        border: none;
+        border-radius: 10px;
+        background: #00ff88;
+        color: black;
+        font-weight: bold;
+      }
+
+      #flash {
+        position: absolute;
+        inset: 0;
+        background: white;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 50;
+      }
+
+      #fade {
+        position: absolute;
+        inset: 0;
+        background: black;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 40;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ui">
+      <button onclick="startStream()">INICIAR STREAM</button>
+
+      <button onclick="takePhoto()">FOTO</button>
+    </div>
+
+    <div id="flash"></div>
+    <div id="fade"></div>
+
+    <script>
+      let currentFrame = null;
+
+      let flashOpacity = 0;
+      let fadeOpacity = 0;
+
+      let cameraSound;
+
+      // ======================================
+      // PRELOAD
+      // ======================================
+
+      function preload() {
+        soundFormats("mp3", "wav");
+      }
+
+      // ======================================
+      // SETUP
+      // ======================================
+
+      function setup() {
+        createCanvas(windowWidth, windowHeight);
+
+        pixelDensity(1);
+
+        noSmooth();
+
+        background(0);
+      }
+
+      // ======================================
+      // DRAW
+      // ======================================
+
+      function draw() {
+        background(0);
+
+        if (currentFrame) {
+          drawNightVision();
+
+          drawCRT();
+
+          drawNoise();
+        }
+
+        animateFlash();
+
+        animateFade();
+      }
+
+      // ======================================
+      // DESENHAR FRAME
+      // ======================================
+
+      function drawNightVision() {
+        image(currentFrame, 0, 0, width, height);
+
+        fill(0, 255, 80, 120);
+        rect(0, 0, width, height);
+
+        blendMode(ADD);
+
+        fill(0, 255, 120, 40);
+
+        rect(0, 0, width, height);
+
+        blendMode(BLEND);
+      }
+
+      // ======================================
+      // EFEITO CRT
+      // ======================================
+
+      function drawCRT() {
+        stroke(0, 255, 80, 25);
+
+        for (let y = 0; y < height; y += 4) {
+          line(0, y, width, y);
+        }
+
+        noFill();
+
+        stroke(0, 255, 100, 40);
+        strokeWeight(2);
+
+        rect(10, 10, width - 20, height - 20, 20);
+      }
+
+      // ======================================
+      // RUIDO
+      // ======================================
+
+      function drawNoise() {
+        loadPixels();
+
+        for (let i = 0; i < pixels.length; i += 4 * 30) {
+          const n = random(255);
+
+          pixels[i] = n;
+          pixels[i + 1] = n;
+          pixels[i + 2] = n;
+        }
+
+        updatePixels();
+      }
+
+      // ======================================
+      // FLASH
+      // ======================================
+
+      function animateFlash() {
+        if (flashOpacity > 0) {
+          flashOpacity -= 15;
+
+          document.getElementById("flash").style.opacity = flashOpacity / 255;
+        }
+      }
+
+      // ======================================
+      // FADE
+      // ======================================
+
+      function animateFade() {
+        if (fadeOpacity < 255 && takingPhoto) {
+          fadeOpacity += 3;
+
+          document.getElementById("fade").style.opacity = fadeOpacity / 255;
+        }
+      }
+
+      // ======================================
+      // STREAM
+      // ======================================
+
+      function startStream() {
+        sendToApp({
+          module: "camera",
+          action: "START_STREAM",
+          params: {},
+        });
+      }
+
+      // ======================================
+      // FOTO
+      // ======================================
+
+      let takingPhoto = false;
+
+      function takePhoto() {
+        takingPhoto = true;
+
+        flashOpacity = 255;
+        fadeOpacity = 0;
+
+        playFlashSound();
+
+        sendToApp({
+          module: "camera",
+          action: "TAKE_PHOTO",
+          params: {
+            saveToGallery: true,
+          },
+        });
+      }
+
+      // ======================================
+      // SOM
+      // ======================================
+
+      function playFlashSound() {
+        const audio = new Audio(
+          "https://assets.mixkit.co/active_storage/sfx/212/212-preview.mp3",
+        );
+
+        audio.volume = 0.6;
+
+        audio.play();
+      }
+
+      // ======================================
+      // RECEBER BRIDGE
+      // ======================================
+
+      window.addEventListener("message", receiveMessage);
+      document.addEventListener("message", receiveMessage);
+
+      function receiveMessage(event) {
+        try {
+          const msg =
+            typeof event.data === "string"
+              ? JSON.parse(event.data)
+              : event.data;
+
+          console.log("RECEIVED:", msg);
+
+          // =========================
+          // FRAME
+          // =========================
+
+          if (msg.module === "camera" && msg.type === "FRAME") {
+            loadImage(msg.data, (img) => {
+              currentFrame = img;
+            });
+          }
+
+          // =========================
+          // FOTO RESULTADO
+          // =========================
+
+          if (msg.module === "camera" && msg.type === "PHOTO_RESULT") {
+            setTimeout(() => {
+              takingPhoto = false;
+            }, 2000);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // ======================================
+      // BRIDGE
+      // ======================================
+
+      function sendToApp(data) {
+        const payload = JSON.stringify(data);
+
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(payload);
+        }
+
+        console.log("SEND:", payload);
+      }
+
+      // ======================================
+
+      function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+      }
+    </script>
+  </body>
+</html>

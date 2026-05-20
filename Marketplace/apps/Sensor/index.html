@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Sensor Cube</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #050505;
+        color: white;
+        font-family: Arial;
+      }
+
+      #ui {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 10;
+      }
+
+      button {
+        padding: 14px 20px;
+        margin-right: 10px;
+        border: none;
+        border-radius: 10px;
+        background: #00ff99;
+        color: black;
+        font-weight: bold;
+      }
+
+      #debug {
+        margin-top: 20px;
+        color: #00ff99;
+        line-height: 1.7;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ui">
+      <button onclick="startSensors()">INICIAR SENSORES</button>
+
+      <button onclick="stopSensors()">PARAR</button>
+
+      <div id="debug"></div>
+    </div>
+
+    <script>
+      // ======================================
+      // DADOS
+      // ======================================
+
+      let accel = {
+        x: 0,
+        y: 0,
+        z: 0,
+      };
+
+      let gyro = {
+        x: 0,
+        y: 0,
+        z: 0,
+      };
+
+      // ======================================
+      // ROTAÇÃO
+      // ======================================
+
+      let rotX = 0;
+      let rotY = 0;
+      let rotZ = 0;
+
+      // ======================================
+      // SETUP
+      // ======================================
+
+      function setup() {
+        createCanvas(windowWidth, windowHeight, WEBGL);
+
+        angleMode(RADIANS);
+      }
+
+      // ======================================
+      // DRAW
+      // ======================================
+
+      function draw() {
+        background(5);
+
+        orbitControl();
+
+        ambientLight(100);
+
+        directionalLight(0, 255, 150, 1, 1, -1);
+
+        // ==========================
+        // MOVIMENTO
+        // ==========================
+
+        rotX += gyro.x * 0.02;
+        rotY += gyro.y * 0.02;
+        rotZ += gyro.z * 0.02;
+
+        // Inclinação pelo acelerômetro
+        const tiltX = accel.y * 0.15;
+        const tiltY = accel.x * 0.15;
+
+        rotateX(rotX + tiltX);
+
+        rotateY(rotY + tiltY);
+
+        rotateZ(rotZ);
+
+        // ==========================
+        // GLOW
+        // ==========================
+
+        push();
+
+        noStroke();
+
+        fill(0, 255, 120, 40);
+
+        sphere(180);
+
+        pop();
+
+        // ==========================
+        // CUBO
+        // ==========================
+
+        normalMaterial();
+
+        stroke(0, 255, 150);
+
+        strokeWeight(2);
+
+        box(160);
+
+        // ==========================
+        // LINHAS INTERNAS
+        // ==========================
+
+        stroke(0, 255, 100);
+
+        for (let i = -60; i <= 60; i += 30) {
+          line(-80, i, -80, 80, i, 80);
+          line(i, -80, -80, i, 80, 80);
+        }
+
+        // ==========================
+        // HUD
+        // ==========================
+
+        updateDebug();
+      }
+
+      // ======================================
+      // DEBUG
+      // ======================================
+
+      function updateDebug() {
+        document.getElementById("debug").innerHTML = `
+
+  <b>ACCELEROMETER</b><br>
+  X: ${accel.x}<br>
+  Y: ${accel.y}<br>
+  Z: ${accel.z}<br><br>
+
+  <b>GYROSCOPE</b><br>
+  X: ${gyro.x}<br>
+  Y: ${gyro.y}<br>
+  Z: ${gyro.z}
+
+  `;
+      }
+
+      // ======================================
+      // START
+      // ======================================
+
+      function startSensors() {
+        sendToApp({
+          module: "sensors",
+          action: "START_ACCELEROMETER",
+          params: {
+            interval: 50,
+          },
+        });
+
+        sendToApp({
+          module: "sensors",
+          action: "START_GYROSCOPE",
+          params: {
+            interval: 50,
+          },
+        });
+      }
+
+      // ======================================
+      // STOP
+      // ======================================
+
+      function stopSensors() {
+        sendToApp({
+          module: "sensors",
+          action: "STOP_ACCELEROMETER",
+          params: {},
+        });
+
+        sendToApp({
+          module: "sensors",
+          action: "STOP_GYROSCOPE",
+          params: {},
+        });
+      }
+
+      // ======================================
+      // RECEBER BRIDGE
+      // ======================================
+
+      window.addEventListener("message", receiveMessage);
+
+      document.addEventListener("message", receiveMessage);
+
+      function receiveMessage(event) {
+        try {
+          const msg =
+            typeof event.data === "string"
+              ? JSON.parse(event.data)
+              : event.data;
+
+          // ==========================
+          // ACCEL
+          // ==========================
+
+          if (msg.module === "sensors" && msg.type === "ACCELEROMETER_DATA") {
+            accel = msg.data;
+          }
+
+          // ==========================
+          // GYRO
+          // ==========================
+
+          if (msg.module === "sensors" && msg.type === "GYROSCOPE_DATA") {
+            gyro = msg.data;
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // ======================================
+      // BRIDGE
+      // ======================================
+
+      function sendToApp(data) {
+        const payload = JSON.stringify(data);
+
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(payload);
+        }
+
+        console.log("SEND:", payload);
+      }
+
+      // ======================================
+
+      function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+      }
+    </script>
+  </body>
+</html>

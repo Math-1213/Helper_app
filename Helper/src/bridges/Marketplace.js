@@ -1,9 +1,8 @@
 import axios from 'axios';
-import Config from 'react-native-config';
 
 // Instância padrão baseada no arquivo .env
 const api = axios.create({
-  baseURL: Config.MARKETPLACE_URL,
+  baseURL: "127.0.0.1:3333",
   timeout: 5000,
 });
 

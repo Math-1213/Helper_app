@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>RGB Split - Teste File Bridge</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        background: #111;
+        color: white;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      h1 {
+        margin-top: 20px;
+      }
+
+      button {
+        padding: 12px 20px;
+        margin: 20px;
+        border: none;
+        border-radius: 10px;
+        background: #ff4444;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      canvas {
+        margin-bottom: 20px;
+        border: 2px solid #333;
+      }
+
+      #status {
+        margin-bottom: 20px;
+        color: #aaa;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>RGB Split 📸</h1>
+
+    <button onclick="pickImage()">Escolher Imagem</button>
+
+    <div id="status">Aguardando imagem...</div>
+
+    <script>
+      let originalImg;
+
+      function setup() {
+        noCanvas();
+      }
+
+      // =========================
+      // ENVIO PARA O APP
+      // =========================
+
+      function sendToApp(data) {
+        const payload = JSON.stringify(data);
+
+        // Android React Native WebView
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(payload);
+        }
+
+        console.log("SEND:", payload);
+      }
+
+      // =========================
+      // PEDIR ARQUIVO
+      // =========================
+
+      function pickImage() {
+        sendToApp({
+          module: "file",
+          action: "PICK_FILE",
+          params: {},
+        });
+      }
+
+      // =========================
+      // RECEBER MENSAGENS DO APP
+      // =========================
+
+      window.addEventListener("message", receiveMessage);
+      document.addEventListener("message", receiveMessage);
+
+      function receiveMessage(event) {
+        try {
+          const msg =
+            typeof event.data === "string"
+              ? JSON.parse(event.data)
+              : event.data;
+
+          console.log("RECEIVED:", msg);
+
+          // =====================
+          // ARQUIVO RECEBIDO
+          // =====================
+
+          if (msg.module === "file" && msg.type === "FILE_PICKED") {
+            loadBase64Image(msg.data.base64);
+
+            saveLastFile(msg.data.name);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // =========================
+      // SALVAR ÚLTIMO ARQUIVO
+      // =========================
+
+      function saveLastFile(fileName) {
+        sendToApp({
+          module: "storage",
+          action: "STORAGE_SAVE",
+          params: {
+            key: "last_image",
+            value: fileName,
+          },
+        });
+      }
+
+      // =========================
+      // CARREGAR IMAGEM
+      // =========================
+
+      function loadBase64Image(base64) {
+        document.getElementById("status").innerText = "Processando imagem...";
+
+        const imgSrc = `data:image/png;base64,${base64}`;
+
+        loadImage(imgSrc, (img) => {
+          originalImg = img;
+
+          processChannels();
+        });
+      }
+
+      // =========================
+      // PROCESSAR CANAIS RGB
+      // =========================
+
+      function processChannels() {
+        document.querySelectorAll("canvas").forEach((c) => c.remove());
+
+        const w = originalImg.width;
+        const h = originalImg.height;
+
+        // CANAL VERMELHO
+        const redImg = createImage(w, h);
+
+        // CANAL VERDE
+        const greenImg = createImage(w, h);
+
+        // CANAL AZUL
+        const blueImg = createImage(w, h);
+
+        originalImg.loadPixels();
+
+        redImg.loadPixels();
+        greenImg.loadPixels();
+        blueImg.loadPixels();
+
+        for (let i = 0; i < originalImg.pixels.length; i += 4) {
+          const r = originalImg.pixels[i];
+          const g = originalImg.pixels[i + 1];
+          const b = originalImg.pixels[i + 2];
+          const a = originalImg.pixels[i + 3];
+
+          // RED
+          redImg.pixels[i] = r;
+          redImg.pixels[i + 1] = 0;
+          redImg.pixels[i + 2] = 0;
+          redImg.pixels[i + 3] = a;
+
+          // GREEN
+          greenImg.pixels[i] = 0;
+          greenImg.pixels[i + 1] = g;
+          greenImg.pixels[i + 2] = 0;
+          greenImg.pixels[i + 3] = a;
+
+          // BLUE
+          blueImg.pixels[i] = 0;
+          blueImg.pixels[i + 1] = 0;
+          blueImg.pixels[i + 2] = b;
+          blueImg.pixels[i + 3] = a;
+        }
+
+        redImg.updatePixels();
+        greenImg.updatePixels();
+        blueImg.updatePixels();
+
+        createChannelCanvas(redImg, "Canal Vermelho");
+        createChannelCanvas(greenImg, "Canal Verde");
+        createChannelCanvas(blueImg, "Canal Azul");
+
+        document.getElementById("status").innerText = "Imagem processada!";
+      }
+
+      // =========================
+      // MOSTRAR CANVAS
+      // =========================
+
+      function createChannelCanvas(img, title) {
+        const label = document.createElement("h2");
+        label.innerText = title;
+        document.body.appendChild(label);
+
+        const cnv = createCanvas(img.width, img.height);
+
+        cnv.parent(document.body);
+
+        image(img, 0, 0);
+      }
+    </script>
+  </body>
+</html>
