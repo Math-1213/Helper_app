@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <!-- Consome o Marketplace - Apenas para Testes -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Helper App Launcher</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card-bg: #1e293b;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent: #38bdf8;
+        --accent-hover: #0284c7;
+        --border: #334155;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Sidebar / Catálogo */
+      aside {
+        width: 320px;
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        background-color: #0b1120;
+      }
+
+      header {
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      header h1 {
+        font-size: 1.2rem;
+        color: var(--accent);
+      }
+
+      .server-status {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      .apps-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      .app-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .app-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+      }
+
+      .app-card.active {
+        border-color: var(--accent);
+        background-color: #1e293b;
+        box-shadow: 0 0 0 1px var(--accent);
+      }
+
+      .app-title {
+        font-weight: 600;
+        font-size: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .app-version {
+        font-size: 0.75rem;
+        background: var(--border);
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: var(--text-muted);
+      }
+
+      .app-desc {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 6px;
+      }
+
+      .app-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        flex: 1;
+        padding: 6px 12px;
+        border-radius: 4px;
+        border: none;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+      }
+
+      .btn-primary {
+        background-color: var(--accent);
+        color: #000;
+      }
+
+      .btn-primary:hover {
+        background-color: var(--accent-hover);
+        color: #fff;
+      }
+
+      .btn-secondary {
+        background-color: var(--border);
+        color: var(--text);
+      }
+
+      /* Área Principal (Navegador/Iframe) */
+      main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background-color: #000;
+      }
+
+      .toolbar {
+        height: 48px;
+        background-color: var(--card-bg);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 12px;
+      }
+
+      .url-bar {
+        flex: 1;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.85rem;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      iframe {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        border: none;
+        background-color: #fff;
+      }
+
+      .empty-state {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        flex-direction: column;
+        gap: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Sidebar: Lista de Módulos -->
+    <aside>
+      <header>
+        <h1>Helper Marketplace</h1>
+        <div id="status" class="server-status">Conectando ao servidor...</div>
+      </header>
+      <div id="appsContainer" class="apps-list">
+        <!-- Apps injetados via JS -->
+      </div>
+    </aside>
+
+    <!-- Main: Área do "Navegador" -->
+    <main>
+      <div class="toolbar">
+        <div id="urlBar" class="url-bar">Nenhum módulo aberto</div>
+      </div>
+      <div id="emptyState" class="empty-state">
+        <p>Selecione um módulo na lista para executar.</p>
+      </div>
+      <iframe id="appFrame" style="display: none"></iframe>
+    </main>
+
+    <script>
+      // Altere a URL do servidor caso esteja rodando em outro IP/porta
+      const API_URL = "http://127.0.0.1:3000";
+
+      const statusEl = document.getElementById("status");
+      const appsContainer = document.getElementById("appsContainer");
+      const appFrame = document.getElementById("appFrame");
+      const emptyState = document.getElementById("emptyState");
+      const urlBar = document.getElementById("urlBar");
+
+      let currentAppId = null;
+
+      // 1. Checa a saúde da API e carrega os módulos
+      async function init() {
+        try {
+          const healthRes = await fetch(`${API_URL}/`);
+          const health = await healthRes.json();
+
+          if (health.status === "ok") {
+            statusEl.textContent = `Servidor Online (Protocolo v${health.protocolVersion})`;
+            loadApps();
+          } else {
+            statusEl.textContent = "Erro ao verificar servidor.";
+          }
+        } catch (err) {
+          statusEl.textContent = "Servidor offline ou inalcançável.";
+          console.error(err);
+        }
+      }
+
+      // 2. Busca o catálogo em /apps.json
+      async function loadApps() {
+        try {
+          const res = await fetch(`${API_URL}/apps.json`);
+          const apps = await res.json();
+
+          appsContainer.innerHTML = "";
+
+          if (apps.length === 0) {
+            appsContainer.innerHTML =
+              '<p style="color: var(--text-muted); font-size: 0.85rem;">Nenhum módulo encontrado na pasta apps/.</p>';
+            return;
+          }
+
+          apps.forEach((app) => {
+            const card = document.createElement("div");
+            card.className = `app-card ${currentAppId === app.id ? "active" : ""}`;
+
+            card.innerHTML = `
+            <div class="app-title">
+              <span>${app.label}</span>
+              ${app.version ? `<span class="app-version">v${app.version}</span>` : ""}
+            </div>
+            ${app.description ? `<div class="app-desc">${app.description}</div>` : ""}
+            <div class="app-actions">
+              <button class="btn btn-primary" onclick="openApp('${app.id}', event)">Executar</button>
+              <a href="${app.url}" class="btn btn-secondary" target="_blank" onclick="event.stopPropagation()">ZIP</a>
+            </div>
+          `;
+
+            card.onclick = () => openApp(app.id);
+            appsContainer.appendChild(card);
+          });
+        } catch (err) {
+          appsContainer.innerHTML =
+            '<p style="color: red;">Erro ao carregar os apps.</p>';
+          console.error(err);
+        }
+      }
+
+      // 3. Executa o módulo dentro do iframe
+      function openApp(appId, event) {
+        if (event) event.stopPropagation();
+
+        currentAppId = appId;
+        const appUrl = `${API_URL}/apps/${appId}/`;
+
+        // Atualiza interface
+        urlBar.textContent = appUrl;
+        appFrame.src = appUrl;
+        appFrame.style.display = "block";
+        emptyState.style.display = "none";
+
+        // Atualiza destaques dos cards
+        loadApps();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
