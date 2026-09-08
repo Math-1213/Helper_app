@@ -37,6 +37,7 @@ from threading import Lock
 
 from bs4 import BeautifulSoup
 from flask import Flask, jsonify, request, send_from_directory, send_file
+from flask_cors import CORS
 from werkzeug.utils import safe_join
 
 # ---------------------------------------------------------------------------
@@ -59,6 +60,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 log = logging.getLogger("marketplace")
 
 app = Flask(__name__)
+CORS(app)
 
 # ---------------------------------------------------------------------------
 # Cache em memória, invalidado por mtime.
