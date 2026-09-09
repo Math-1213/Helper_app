@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   FlatList,
   Modal,
@@ -7,13 +7,11 @@ import {
   StatusBar,
   DeviceEventEmitter,
   TouchableOpacity,
+  ScrollView,
+  View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  requestMultiple,
-  PERMISSIONS,
-  RESULTS,
-} from 'react-native-permissions';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {requestMultiple, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -29,6 +27,7 @@ import {
   CardInfo,
   DeleteButton,
   EmptyContainer,
+  EmptyTitle,
   EmptyText,
   Fab,
   ModalContent,
@@ -41,14 +40,19 @@ import {
   HeaderActions,
   IconButton,
   Content,
+  IpHistoryLabel,
+  IpBadge,
+  IpBadgeText,
 } from './styles';
 
 import MarketplaceModal from '../components/MarketplaceModal';
-import { downloadUpdateCode } from '../Services/Helper';
-import { setMarketplaceBaseURL } from '../bridges/Marketplace'; // Importe a função que criamos
+import {downloadUpdateCode} from '../Services/Helper';
+import {setMarketplaceBaseURL} from '../bridges/Marketplace';
 
-const debug = false;
-export default function HomeScreen({ navigation }) {
+const DEBUG = false;
+const IP_HISTORY_KEY = 'marketplaceIpHistory';
+
+export default function HomeScreen({navigation}) {
   const [apps, setApps] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [marketplaceVisible, setMarketplaceVisible] = useState(false);
@@ -56,13 +60,14 @@ export default function HomeScreen({ navigation }) {
   const [newLabel, setNewLabel] = useState('');
   const [configVisible, setConfigVisible] = useState(false);
   const [marketplaceIp, setMarketplaceIp] = useState('');
+  const [ipHistory, setIpHistory] = useState([]);
 
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     handlePermissions();
     loadApps();
-    loadMarketplaceIp(); // Carrega o IP salvo ao abrir o app
+    loadMarketplaceConfig();
   }, []);
 
   useEffect(() => {
@@ -72,7 +77,7 @@ export default function HomeScreen({ navigation }) {
         setApps(prevApps => {
           const updated = prevApps.map(app =>
             app.id === data.id
-              ? { ...app, htmlLocal: data.html, lastUpdate: Date.now() }
+              ? {...app, htmlLocal: data.html, lastUpdate: Date.now()}
               : app,
           );
           saveApps(updated);
@@ -84,28 +89,47 @@ export default function HomeScreen({ navigation }) {
     return () => subscription.remove();
   }, []);
 
-  const loadMarketplaceIp = async () => {
+  const loadMarketplaceConfig = async () => {
     try {
       const savedIp = await AsyncStorage.getItem('marketplaceIp');
+      const historyStr = await AsyncStorage.getItem(IP_HISTORY_KEY);
+
       if (savedIp) {
         setMarketplaceIp(savedIp);
-        setMarketplaceBaseURL(savedIp); // Aplica na instância do Axios
+        setMarketplaceBaseURL(savedIp);
+      }
+      if (historyStr) {
+        setIpHistory(JSON.parse(historyStr));
       }
     } catch (error) {
-      console.log('Erro ao carregar IP do marketplace', error);
+      console.log('Erro ao carregar configurações de IP', error);
     }
   };
 
-  // Salva o novo IP
   const saveMarketplaceIp = async () => {
-    if (!marketplaceIp) return;
+    if (!marketplaceIp.trim()) return;
+
+    const formattedIp = marketplaceIp.trim();
+
     try {
-      await AsyncStorage.setItem('marketplaceIp', marketplaceIp);
-      setMarketplaceBaseURL(marketplaceIp); // Atualiza o Axios imediatamente
+      await AsyncStorage.setItem('marketplaceIp', formattedIp);
+      setMarketplaceBaseURL(formattedIp);
+
+      // Atualiza o histórico limpando duplicados e limitando a 5 entradas
+      const updatedHistory = [
+        formattedIp,
+        ...ipHistory.filter(item => item !== formattedIp),
+      ].slice(0, 5);
+
+      setIpHistory(updatedHistory);
+      await AsyncStorage.setItem(
+        IP_HISTORY_KEY,
+        JSON.stringify(updatedHistory),
+      );
+
       setConfigVisible(false);
-      Alert.alert('Sucesso', 'Endereço do Marketplace atualizado!');
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível salvar a configuração.');
+      Alert.alert('Erro', 'Não foi possível salvar o endereço.');
     }
   };
 
@@ -126,7 +150,7 @@ export default function HomeScreen({ navigation }) {
       if (denied) {
         Alert.alert(
           'Permissões Necessárias',
-          'Alguns recursos do Helper podem não funcionar sem as permissões aceitas.',
+          'Alguns recursos podem não funcionar sem as permissões solicitadas.',
         );
       }
     }
@@ -143,42 +167,47 @@ export default function HomeScreen({ navigation }) {
   };
 
   const addApp = async () => {
-    if (!newUrl) return;
+    if (!newUrl.trim()) return;
 
     try {
       const id = Date.now().toString();
-      const resultado = await downloadUpdateCode(newUrl);
+      const resultado = await downloadUpdateCode(newUrl.trim());
 
       const newApp = {
         id,
-        url: newUrl,
-        label: newLabel || newUrl,
+        url: newUrl.trim(),
+        label: newLabel.trim() || newUrl.trim(),
         htmlLocal: resultado,
         lastUpdate: Date.now(),
       };
 
-      const updatedApps = [...apps, newApp];
-      await saveApps(updatedApps);
+      await saveApps([...apps, newApp]);
       closeModal();
     } catch (error) {
-      console.log(error);
-      Alert.alert('Erro', 'Não foi possível baixar o Modulo.');
+      Alert.alert('Erro', 'Não foi possível baixar o Módulo.');
     }
   };
 
-  const deleteApp = id => {
-    Alert.alert('Excluir App', 'Deseja realmente remover este Modulo?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: () => {
-          const updatedApps = apps.filter(app => app.id !== id);
-          saveApps(updatedApps);
+  const deleteApp = useCallback(id => {
+    Alert.alert(
+      'Excluir Módulo',
+      'Deseja remover este módulo permanentemente?',
+      [
+        {text: 'Cancelar', style: 'cancel'},
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => {
+            setApps(prev => {
+              const updated = prev.filter(app => app.id !== id);
+              saveApps(updated);
+              return updated;
+            });
+          },
         },
-      },
-    ]);
-  };
+      ],
+    );
+  }, []);
 
   const closeModal = () => {
     setModalVisible(false);
@@ -186,27 +215,63 @@ export default function HomeScreen({ navigation }) {
     setNewLabel('');
   };
 
-  return (
-    <Container bottom={insets.bottom}>
-      <Content top={insets.top + 30}>
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0C" />
+  const renderAppItem = useCallback(
+    ({item}) => {
+      const formattedDate = item.lastUpdate
+        ? new Date(item.lastUpdate).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : null;
 
+      return (
+        <Card>
+          <CardTouchable
+            onPress={() =>
+              navigation.navigate('WebView', {
+                url: item.url,
+                htmlLocal: item.htmlLocal,
+                appId: item.id,
+              })
+            }>
+            <CardIconContainer>
+              <Icon name="cube-outline" size={20} color="#7C4DFF" />
+            </CardIconContainer>
+            <CardInfo>
+              <CardText numberOfLines={1}>{item.label}</CardText>
+              <CardSubtext numberOfLines={1}>
+                {item.url} {formattedDate ? `• ${formattedDate}` : ''}
+              </CardSubtext>
+            </CardInfo>
+          </CardTouchable>
+          <DeleteButton onPress={() => deleteApp(item.id)}>
+            <Icon name="trash-outline" size={18} color="#FF4D4D" />
+          </DeleteButton>
+        </Card>
+      );
+    },
+    [navigation, deleteApp],
+  );
+
+  return (
+    <Container>
+      <StatusBar barStyle="light-content" backgroundColor="#0A0A0C" />
+      <Content style={{paddingTop: insets.top}}>
         <Header>
           <HeaderTitle>Helper</HeaderTitle>
           <HeaderActions>
-            {/* NOVO: Botão de Configuração do IP */}
             <IconButton onPress={() => setConfigVisible(true)}>
-              <Icon name="settings-outline" size={20} color="#FFFFFF" />
+              <Icon name="settings-outline" size={18} color="#FFFFFF" />
             </IconButton>
 
-            {debug && (
+            {DEBUG && (
               <IconButton onPress={() => navigation.navigate('Lab')}>
-                <Icon name="construct-outline" size={20} color="#7c4dff" />
+                <Icon name="construct-outline" size={18} color="#7C4DFF" />
               </IconButton>
             )}
 
             <IconButton onPress={() => setMarketplaceVisible(true)}>
-              <Icon name="grid-outline" size={20} color="#FFFFFF" />
+              <Icon name="grid-outline" size={18} color="#FFFFFF" />
             </IconButton>
           </HeaderActions>
         </Header>
@@ -215,62 +280,43 @@ export default function HomeScreen({ navigation }) {
           data={apps}
           keyExtractor={item => item.id}
           contentContainerStyle={{
-            paddingBottom: insets.bottom + 100,
-            paddingTop: 8,
+            paddingBottom: insets.bottom + 80,
+            paddingTop: 12,
           }}
-          renderItem={({ item }) => (
-            <Card>
-              <CardTouchable
-                onPress={() =>
-                  navigation.navigate('WebView', {
-                    url: item.url,
-                    htmlLocal: item.htmlLocal,
-                    appId: item.id,
-                  })
-                }
-              >
-                <CardIconContainer>
-                  <Icon name="cube-outline" size={22} color="#7c4dff" />
-                </CardIconContainer>
-                <CardInfo>
-                  <CardText numberOfLines={1}>{item.label}</CardText>
-                  <CardSubtext numberOfLines={1}>{item.url}</CardSubtext>
-                </CardInfo>
-              </CardTouchable>
-              <DeleteButton onPress={() => deleteApp(item.id)}>
-                <Icon name="trash-outline" size={18} color="#FF4D4D" />
-              </DeleteButton>
-            </Card>
-          )}
+          renderItem={renderAppItem}
           ListEmptyComponent={
             <EmptyContainer>
-              <Icon name="layers-outline" size={48} color="#22222A" />
-              <EmptyText>Nenhum Modulo importado ainda.</EmptyText>
+              <Icon name="layers-outline" size={44} color="#262632" />
+              <EmptyTitle>Nenhum módulo instalado</EmptyTitle>
+              <EmptyText>
+                Importe executando um endereço de rede local ou selecione no
+                Marketplace.
+              </EmptyText>
             </EmptyContainer>
           }
         />
 
         <Fab
-          style={{ bottom: insets.bottom + 24 }}
-          onPress={() => setModalVisible(true)}
-        >
+          style={{bottom: insets.bottom + 20}}
+          onPress={() => setModalVisible(true)}>
           <Icon name="add" size={28} color="#FFFFFF" />
         </Fab>
 
+        {/* Modal Adicionar Módulo */}
         <Modal visible={modalVisible} animationType="slide" transparent>
           <ModalOverlay behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ModalContent>
               <ModalHeader>
-                <ModalTitle>Adicionar Modulo</ModalTitle>
+                <ModalTitle>Adicionar Módulo</ModalTitle>
                 <TouchableOpacity onPress={closeModal}>
-                  <Icon name="close" size={24} color="#707080" />
+                  <Icon name="close" size={22} color="#707080" />
                 </TouchableOpacity>
               </ModalHeader>
 
               <StyledInput
                 value={newLabel}
                 onChangeText={setNewLabel}
-                placeholder="Nome do App"
+                placeholder="Nome do Módulo"
                 placeholderTextColor="#555565"
               />
               <StyledInput
@@ -283,19 +329,20 @@ export default function HomeScreen({ navigation }) {
                 keyboardType="url"
               />
               <PrimaryButton onPress={addApp}>
-                <ButtonText>Confirmar e Instalar</ButtonText>
+                <ButtonText>Instalar Módulo</ButtonText>
               </PrimaryButton>
             </ModalContent>
           </ModalOverlay>
         </Modal>
 
+        {/* Modal Configuração de IP com Histórico */}
         <Modal visible={configVisible} animationType="slide" transparent>
           <ModalOverlay behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ModalContent>
               <ModalHeader>
                 <ModalTitle>Configurar Marketplace</ModalTitle>
                 <TouchableOpacity onPress={() => setConfigVisible(false)}>
-                  <Icon name="close" size={24} color="#707080" />
+                  <Icon name="close" size={22} color="#707080" />
                 </TouchableOpacity>
               </ModalHeader>
 
@@ -308,6 +355,20 @@ export default function HomeScreen({ navigation }) {
                 autoCorrect={false}
                 keyboardType="url"
               />
+
+              {ipHistory.length > 0 && (
+                <View style={{marginBottom: 8}}>
+                  <IpHistoryLabel>IPs Recentes</IpHistoryLabel>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {ipHistory.map(ip => (
+                      <IpBadge key={ip} onPress={() => setMarketplaceIp(ip)}>
+                        <IpBadgeText>{ip}</IpBadgeText>
+                      </IpBadge>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
               <PrimaryButton onPress={saveMarketplaceIp}>
                 <ButtonText>Salvar Endereço</ButtonText>
               </PrimaryButton>

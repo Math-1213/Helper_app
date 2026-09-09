@@ -1,9 +1,4 @@
-import React, {
-  forwardRef,
-  useImperativeHandle,
-  useRef,
-  useEffect,
-} from 'react';
+import React, {forwardRef, useImperativeHandle, useRef, useEffect} from 'react';
 import {
   accelerometer,
   gyroscope,
@@ -11,11 +6,20 @@ import {
   SensorTypes,
 } from 'react-native-sensors';
 
-const SensorBridge = forwardRef(({ sendToWebView }, ref) => {
+const SensorBridge = forwardRef(({sendToWebView}, ref) => {
   const subscriptions = useRef({
     accelerometer: null,
     gyroscope: null,
   });
+
+  const stopAllSensors = () => {
+    Object.keys(subscriptions.current).forEach(key => {
+      if (subscriptions.current[key]) {
+        subscriptions.current[key].unsubscribe();
+        subscriptions.current[key] = null;
+      }
+    });
+  };
 
   useEffect(() => {
     return () => {
@@ -23,68 +27,143 @@ const SensorBridge = forwardRef(({ sendToWebView }, ref) => {
     };
   }, []);
 
-  const stopAllSensors = () => {
-    Object.keys(subscriptions.current).forEach(key => {
-      subscriptions.current[key]?.unsubscribe();
-      subscriptions.current[key] = null;
-    });
-  };
+  const startAccelerometer = (params = {}, callbackId) => {
+    subscriptions.current.accelerometer?.unsubscribe();
 
-  useImperativeHandle(ref, () => ({
-    START_ACCELEROMETER(params) {
-      // Limpa antes de iniciar para evitar duplicidade
-      subscriptions.current.accelerometer?.unsubscribe();
+    const interval = params?.interval || 100;
+    setUpdateIntervalForType(SensorTypes.accelerometer, interval);
 
-      const interval = params?.interval || 100;
-      setUpdateIntervalForType(SensorTypes.accelerometer, interval);
-
-      subscriptions.current.accelerometer = accelerometer.subscribe(
-        ({ x, y, z }) => {
-          sendToWebView({
-            module: 'sensors',
-            type: 'ACCELEROMETER_DATA',
-            data: {
-              x: parseFloat(x.toFixed(2)),
-              y: parseFloat(y.toFixed(2)),
-              z: parseFloat(z.toFixed(2)),
-            },
-          });
-        },
-      );
-      console.log('Módulo Sensors: Acelerômetro ativado');
-    },
-
-    STOP_ACCELEROMETER() {
-      subscriptions.current.accelerometer?.unsubscribe();
-      subscriptions.current.accelerometer = null;
-      console.log('Módulo Sensors: Acelerômetro parado');
-    },
-
-    START_GYROSCOPE(params) {
-      subscriptions.current.gyroscope?.unsubscribe();
-
-      const interval = params?.interval || 100;
-      setUpdateIntervalForType(SensorTypes.gyroscope, interval);
-
-      subscriptions.current.gyroscope = gyroscope.subscribe(({ x, y, z }) => {
+    subscriptions.current.accelerometer = accelerometer.subscribe({
+      next: ({x, y, z, timestamp}) => {
         sendToWebView({
+          callbackId,
           module: 'sensors',
-          type: 'GYROSCOPE_DATA',
+          type: 'ACCELEROMETER_DATA',
+          success: true,
           data: {
             x: parseFloat(x.toFixed(2)),
             y: parseFloat(y.toFixed(2)),
             z: parseFloat(z.toFixed(2)),
+            timestamp,
           },
         });
-      });
-      console.log('Módulo Sensors: Giroscópio ativado');
-    },
+      },
+      error: error => {
+        sendToWebView({
+          callbackId,
+          module: 'sensors',
+          type: 'ERROR',
+          success: false,
+          message: error?.message || 'Acelerômetro indisponível no dispositivo',
+        });
+        stopAccelerometer();
+      },
+    });
+  };
 
-    STOP_GYROSCOPE() {
-      subscriptions.current.gyroscope?.unsubscribe();
+  const stopAccelerometer = callbackId => {
+    if (subscriptions.current.accelerometer) {
+      subscriptions.current.accelerometer.unsubscribe();
+      subscriptions.current.accelerometer = null;
+    }
+    if (callbackId) {
+      sendToWebView({
+        callbackId,
+        module: 'sensors',
+        type: 'SENSOR_STOPPED',
+        sensor: 'accelerometer',
+        success: true,
+      });
+    }
+  };
+
+  const startGyroscope = (params = {}, callbackId) => {
+    subscriptions.current.gyroscope?.unsubscribe();
+
+    const interval = params?.interval || 100;
+    setUpdateIntervalForType(SensorTypes.gyroscope, interval);
+
+    subscriptions.current.gyroscope = gyroscope.subscribe({
+      next: ({x, y, z, timestamp}) => {
+        sendToWebView({
+          callbackId,
+          module: 'sensors',
+          type: 'GYROSCOPE_DATA',
+          success: true,
+          data: {
+            x: parseFloat(x.toFixed(2)),
+            y: parseFloat(y.toFixed(2)),
+            z: parseFloat(z.toFixed(2)),
+            timestamp,
+          },
+        });
+      },
+      error: error => {
+        sendToWebView({
+          callbackId,
+          module: 'sensors',
+          type: 'ERROR',
+          success: false,
+          message: error?.message || 'Giroscópio indisponível no dispositivo',
+        });
+        stopGyroscope();
+      },
+    });
+  };
+
+  const stopGyroscope = callbackId => {
+    if (subscriptions.current.gyroscope) {
+      subscriptions.current.gyroscope.unsubscribe();
       subscriptions.current.gyroscope = null;
-      console.log('Módulo Sensors: Giroscópio parado');
-    },
+    }
+    if (callbackId) {
+      sendToWebView({
+        callbackId,
+        module: 'sensors',
+        type: 'SENSOR_STOPPED',
+        sensor: 'gyroscope',
+        success: true,
+      });
+    }
+  };
+
+  const handleAction = async payload => {
+    const {action, callbackId, ...params} = payload;
+
+    switch (action) {
+      case 'START_ACCELEROMETER':
+        startAccelerometer(params, callbackId);
+        break;
+      case 'STOP_ACCELEROMETER':
+        stopAccelerometer(callbackId);
+        break;
+      case 'START_GYROSCOPE':
+        startGyroscope(params, callbackId);
+        break;
+      case 'STOP_GYROSCOPE':
+        stopGyroscope(callbackId);
+        break;
+      default:
+        if (callbackId) {
+          sendToWebView({
+            callbackId,
+            module: 'sensors',
+            type: 'ERROR',
+            success: false,
+            message: `Ação '${action}' não encontrada no SensorBridge.`,
+          });
+        }
+        break;
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    handleAction,
+    START_ACCELEROMETER: (params, callbackId) =>
+      startAccelerometer(params, callbackId),
+    STOP_ACCELEROMETER: callbackId => stopAccelerometer(callbackId),
+    START_GYROSCOPE: (params, callbackId) => startGyroscope(params, callbackId),
+    STOP_GYROSCOPE: callbackId => stopGyroscope(callbackId),
   }));
 
   return null;

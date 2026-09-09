@@ -1,24 +1,45 @@
 import axios from 'axios';
+import RNFS from 'react-native-fs';
 
 export const downloadUpdateCode = async url => {
-  try {
-    // Garante compatibilidade tanto com http:// quanto https://
-    const formattedUrl =
-      url.startsWith('http://') ||
-      url.startsWith('https://') ||
-      url.startsWith('file://')
-        ? url
-        : `http://${url}`; // Mude para https:// se for o padrão de produção
+  if (!url) return null;
 
-    // Axios gerencia o timeout de forma nativa e limpa
+  try {
+    const cleanUrl = url.trim();
+
+    // 1. Trata arquivos locais extraídos pelo Marketplace
+    if (cleanUrl.startsWith('file://')) {
+      const filePath = cleanUrl.replace('file://', '');
+      const exists = await RNFS.exists(filePath);
+
+      if (!exists) {
+        console.warn(`[Helper] Arquivo local não encontrado: ${filePath}`);
+        return null;
+      }
+
+      // Lê o HTML direto do sistema de arquivos do Android/iOS
+      const localContent = await RNFS.readFile(filePath, 'utf8');
+      return localContent;
+    }
+
+    // 2. Formata URLs remota de rede (Dev ou Produção)
+    const formattedUrl =
+      cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')
+        ? cleanUrl
+        : `http://${cleanUrl}`;
+
+    // 3. Download via Axios com timeouts e validação de status
     const response = await axios.get(formattedUrl, {
       timeout: 5000,
-      responseType: 'text', // Garante que o retorno venha como string/texto
+      responseType: 'text',
+      validateStatus: status => status >= 200 && status < 300,
     });
 
-    return response.data; // Retorna o HTML/Código baixado
+    return response.data;
   } catch (err) {
-    console.log('Erro ao baixar, usando cache...', err.message);
-    return null; // Retorna null para o componente usar a versão estável local
+    console.log(`[Helper] Erro ao baixar update (${url}):`, err.message);
+    return null; // Retorna null para ativar o fallback de cache local na WebViewScreen
   }
 };
+
+export default downloadUpdateCode;

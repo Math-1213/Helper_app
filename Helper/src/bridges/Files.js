@@ -1,118 +1,246 @@
-import React, { forwardRef, useImperativeHandle } from 'react';
+import React, {forwardRef, useImperativeHandle} from 'react';
 import RNFS from 'react-native-fs';
-import { pick, types } from '@react-native-documents/picker';
+import {pick, types, isCancel} from '@react-native-documents/picker';
 
-const FileBridge = forwardRef(({ sendToWebView }, ref) => {
-  useImperativeHandle(ref, () => ({
-    async SAVE_FILE({ fileName, data }) {
-      const path = `${RNFS.DocumentDirectoryPath}/${fileName}`;
-      try {
-        await RNFS.writeFile(path, data, 'base64');
-        sendToWebView({
-          module: 'file',
-          type: 'FILE_SUCCESS',
-          message: 'Arquivo salvo: ' + fileName,
-        });
-      } catch (err) {
-        sendToWebView({ module: 'file', type: 'ERROR', message: err.message });
+const FileBridge = forwardRef(({sendToWebView}, ref) => {
+  // Retorna o diretório do módulo específico para isolar o storage de arquivos
+  const getAppDirectory = async (appId = 'default') => {
+    const dir = `${RNFS.DocumentDirectoryPath}/apps/${appId}`;
+    if (!(await RNFS.exists(dir))) {
+      await RNFS.mkdir(dir);
+    }
+    return dir;
+  };
+
+  const saveFile = async (
+    {fileName, data, encoding = 'base64'},
+    callbackId,
+    context,
+  ) => {
+    try {
+      if (!fileName || data === undefined) {
+        throw new Error('Parâmetros "fileName" e "data" são obrigatórios.');
       }
-    },
 
-    async READ_FILE({ fileName }) {
-      const path = `${RNFS.DocumentDirectoryPath}/${fileName}`;
-      try {
-        const content = await RNFS.readFile(path, 'base64');
-        sendToWebView({
-          module: 'file',
-          type: 'FILE_DATA',
-          data: content,
-          fileName: fileName,
-        });
-      } catch (err) {
-        sendToWebView({
-          module: 'file',
-          type: 'ERROR',
-          message: 'Arquivo não encontrado',
-        });
+      const dir = await getAppDirectory(context?.appId);
+      const path = `${dir}/${fileName}`;
+
+      // Validação do encoding: suporta 'utf8' ou 'base64'
+      const writeEncoding = encoding === 'utf8' ? 'utf8' : 'base64';
+      await RNFS.writeFile(path, data, writeEncoding);
+
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'FILE_SUCCESS',
+        success: true,
+        message: `Arquivo salvo: ${fileName}`,
+      });
+    } catch (err) {
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'ERROR',
+        success: false,
+        message: err.message,
+      });
+    }
+  };
+
+  const readFile = async (
+    {fileName, encoding = 'base64'},
+    callbackId,
+    context,
+  ) => {
+    try {
+      const dir = await getAppDirectory(context?.appId);
+      const path = `${dir}/${fileName}`;
+
+      if (!(await RNFS.exists(path))) {
+        throw new Error(`Arquivo não encontrado: ${fileName}`);
       }
-    },
 
-    async LIST_FILES() {
-      try {
-        const result = await RNFS.readDir(RNFS.DocumentDirectoryPath);
-        const files = result.filter(f => f.isFile()).map(f => f.name);
-        sendToWebView({
-          module: 'file',
-          type: 'FILE_LIST',
-          data: files,
-        });
-      } catch (err) {
-        sendToWebView({ module: 'file', type: 'ERROR', message: err.message });
+      const readEncoding = encoding === 'utf8' ? 'utf8' : 'base64';
+      const content = await RNFS.readFile(path, readEncoding);
+
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'FILE_DATA',
+        success: true,
+        data: content,
+        fileName,
+      });
+    } catch (err) {
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'ERROR',
+        success: false,
+        message: err.message,
+      });
+    }
+  };
+
+  const listFiles = async (callbackId, context) => {
+    try {
+      const dir = await getAppDirectory(context?.appId);
+      const result = await RNFS.readDir(dir);
+      const files = result.filter(f => f.isFile()).map(f => f.name);
+
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'FILE_LIST',
+        success: true,
+        data: files,
+      });
+    } catch (err) {
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'ERROR',
+        success: false,
+        message: err.message,
+      });
+    }
+  };
+
+  const pickFile = async (params = {}, callbackId) => {
+    try {
+      const results = await pick({
+        type: [types.allFiles],
+        copyTo: 'cachesDirectory',
+      });
+
+      if (!results || results.length === 0) return;
+
+      const res = results[0];
+      let uriToRead = res.fileCopyUri || res.uri;
+
+      if (!uriToRead) {
+        throw new Error(
+          'Não foi possível determinar o caminho do arquivo selecionado.',
+        );
       }
-    },
 
-    async PICK_FILE(params) {
-      try {
-        const results = await pick({
-          type: [types.allFiles],
-          copyTo: 'cachesDirectory', // Tenta copiar para o cache
-        });
+      // Decodifica URIs com caracteres especiais (%20, etc)
+      uriToRead = decodeURIComponent(uriToRead);
 
-        if (!results || results.length === 0) return;
+      const base64Content = await RNFS.readFile(uriToRead, 'base64');
 
-        const res = results[0];
-
-        // CORREÇÃO: Verifica qual URI está disponível.
-        // Se o fileCopyUri falhou no 'copyTo', usamos o uri normal.
-        const uriToRead = res.fileCopyUri || res.uri;
-
-        if (!uriToRead) {
-          throw new Error('Não foi possível determinar o caminho do arquivo.');
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'FILE_PICKED',
+        success: true,
+        data: {
+          name: res.name,
+          size: res.size,
+          uri: res.uri,
+          type: res.type,
+          base64: base64Content,
+        },
+      });
+    } catch (err) {
+      if (isCancel(err) || err?.code === 'DOCUMENT_PICKER_CANCELED') {
+        if (callbackId) {
+          sendToWebView({
+            callbackId,
+            module: 'file',
+            type: 'CANCELLED',
+            success: false,
+            message: 'Seleção cancelada pelo usuário.',
+          });
         }
-
-        // O RNFS precisa que o caminho no Android não tenha o prefixo 'content://'
-        // para algumas operações, mas o readFile costuma lidar bem com URIs se o módulo nativo permitir.
-        const base64Content = await RNFS.readFile(uriToRead, 'base64');
-
-        sendToWebView({
-          module: 'file',
-          type: 'FILE_PICKED',
-          data: {
-            name: res.name,
-            size: res.size,
-            uri: res.uri,
-            type: res.type,
-            base64: base64Content,
-          },
-        });
-      } catch (err) {
-        console.log('Erro Código:', err?.code);
-        console.log('Erro Mensagem:', err?.message);
-
-        if (err?.code === 'DOCUMENT_PICKER_CANCELED') return;
-
-        sendToWebView({
-          module: 'file',
-          type: 'ERROR',
-          message: err?.message || 'Erro ao processar arquivo selecionado',
-        });
+        return;
       }
-    },
 
-    // Bônus: Ação para salvar o arquivo importado na pasta permanente do app
-    async IMPORT_PICKED_FILE({ sourceUri, fileName }) {
-      const destPath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
-      try {
-        await RNFS.copyFile(sourceUri, destPath);
-        sendToWebView({
-          module: 'file',
-          type: 'FILE_SUCCESS',
-          message: 'Arquivo importado com sucesso',
-        });
-      } catch (err) {
-        sendToWebView({ module: 'file', type: 'ERROR', message: err.message });
-      }
-    },
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'ERROR',
+        success: false,
+        message: err?.message || 'Erro ao processar arquivo selecionado',
+      });
+    }
+  };
+
+  const importPickedFile = async (
+    {sourceUri, fileName},
+    callbackId,
+    context,
+  ) => {
+    try {
+      const dir = await getAppDirectory(context?.appId);
+      const destPath = `${dir}/${fileName}`;
+
+      const cleanSourceUri = decodeURIComponent(
+        sourceUri.replace('file://', ''),
+      );
+      await RNFS.copyFile(cleanSourceUri, destPath);
+
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'FILE_SUCCESS',
+        success: true,
+        message: 'Arquivo importado com sucesso',
+      });
+    } catch (err) {
+      sendToWebView({
+        callbackId,
+        module: 'file',
+        type: 'ERROR',
+        success: false,
+        message: err.message,
+      });
+    }
+  };
+
+  const handleAction = async (payload, context) => {
+    const {action, callbackId, ...params} = payload;
+
+    switch (action) {
+      case 'SAVE_FILE':
+        await saveFile(params, callbackId, context);
+        break;
+      case 'READ_FILE':
+        await readFile(params, callbackId, context);
+        break;
+      case 'LIST_FILES':
+        await listFiles(callbackId, context);
+        break;
+      case 'PICK_FILE':
+        await pickFile(params, callbackId);
+        break;
+      case 'IMPORT_PICKED_FILE':
+        await importPickedFile(params, callbackId, context);
+        break;
+      default:
+        if (callbackId) {
+          sendToWebView({
+            callbackId,
+            module: 'file',
+            type: 'ERROR',
+            success: false,
+            message: `Ação '${action}' não reconhecida no FileBridge.`,
+          });
+        }
+        break;
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    handleAction,
+    SAVE_FILE: (params, callbackId, context) =>
+      saveFile(params, callbackId, context),
+    READ_FILE: (params, callbackId, context) =>
+      readFile(params, callbackId, context),
+    LIST_FILES: (params, callbackId, context) => listFiles(callbackId, context),
+    PICK_FILE: (params, callbackId) => pickFile(params, callbackId),
+    IMPORT_PICKED_FILE: (params, callbackId, context) =>
+      importPickedFile(params, callbackId, context),
   }));
 
   return null;
