@@ -126,7 +126,7 @@ export default function MarketplaceModal({
         disabled={downloadingAppId !== null}>
         <View style={styles.cardHeader}>
           <Text style={styles.title}>{item.label}</Text>
-          {isDownloading && <ActivityIndicator size="small" color="#6200EE" />}
+          {isDownloading && <ActivityIndicator size="small" color="#7C4DFF" />}
         </View>
         <Text style={styles.url} numberOfLines={1}>
           {item.url}
@@ -156,7 +156,7 @@ export default function MarketplaceModal({
           {loading && apps.length === 0 ? (
             <ActivityIndicator
               size="large"
-              color="#6200EE"
+              color="#7C4DFF"
               style={{marginVertical: 30}}
             />
           ) : (
@@ -201,13 +201,15 @@ export default function MarketplaceModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     padding: 20,
   },
   container: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 12,
+    backgroundColor: '#121216',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#22222a',
     padding: 20,
     maxHeight: '80%',
   },
@@ -219,16 +221,23 @@ const styles = StyleSheet.create({
   },
   header: {
     color: '#FFF',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
   },
   reloadButton: {
-    padding: 6,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#1C1C24',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   card: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#121216',
+    borderWidth: 1,
+    borderColor: '#22222a',
     padding: 14,
-    borderRadius: 8,
+    borderRadius: 16,
     marginBottom: 10,
   },
   cardHeader: {
@@ -238,37 +247,38 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
   },
   url: {
-    color: '#888',
+    color: '#707080',
     fontSize: 12,
     marginTop: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: '#333',
+    backgroundColor: '#22222a',
     marginVertical: 15,
   },
   manualButton: {
-    backgroundColor: '#6200EE',
+    backgroundColor: '#7C4DFF',
     padding: 12,
-    borderRadius: 6,
+    borderRadius: 12,
     alignItems: 'center',
     marginBottom: 10,
   },
   manualText: {
     color: '#FFF',
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
   },
   closeText: {
-    color: '#AAA',
+    color: '#707080',
     textAlign: 'center',
     paddingVertical: 4,
   },
   emptyText: {
-    color: '#888',
+    color: '#555565',
     textAlign: 'center',
     marginVertical: 20,
   },

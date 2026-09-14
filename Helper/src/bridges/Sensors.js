@@ -54,7 +54,7 @@ const SensorBridge = forwardRef(({sendToWebView}, ref) => {
           module: 'sensors',
           type: 'ERROR',
           success: false,
-          message: error?.message || 'Acelerômetro indisponível no dispositivo',
+          error: error?.message || 'Acelerômetro indisponível no dispositivo',
         });
         stopAccelerometer();
       },
@@ -104,7 +104,7 @@ const SensorBridge = forwardRef(({sendToWebView}, ref) => {
           module: 'sensors',
           type: 'ERROR',
           success: false,
-          message: error?.message || 'Giroscópio indisponível no dispositivo',
+          error: error?.message || 'Giroscópio indisponível no dispositivo',
         });
         stopGyroscope();
       },
@@ -150,7 +150,7 @@ const SensorBridge = forwardRef(({sendToWebView}, ref) => {
             module: 'sensors',
             type: 'ERROR',
             success: false,
-            message: `Ação '${action}' não encontrada no SensorBridge.`,
+            error: `Ação '${action}' não encontrada no SensorBridge.`,
           });
         }
         break;
@@ -159,11 +159,6 @@ const SensorBridge = forwardRef(({sendToWebView}, ref) => {
 
   useImperativeHandle(ref, () => ({
     handleAction,
-    START_ACCELEROMETER: (params, callbackId) =>
-      startAccelerometer(params, callbackId),
-    STOP_ACCELEROMETER: callbackId => stopAccelerometer(callbackId),
-    START_GYROSCOPE: (params, callbackId) => startGyroscope(params, callbackId),
-    STOP_GYROSCOPE: callbackId => stopGyroscope(callbackId),
   }));
 
   return null;

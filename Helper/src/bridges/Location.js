@@ -38,7 +38,7 @@ const LocationBridge = forwardRef(({sendToWebView}, ref) => {
         module: 'location',
         type: 'ERROR',
         success: false,
-        message: 'Permissão de localização negada',
+        error: 'Permissão de localização negada.',
       });
       return;
     }
@@ -49,42 +49,47 @@ const LocationBridge = forwardRef(({sendToWebView}, ref) => {
       maximumAge = 10000,
     } = params;
 
-    Geolocation.getCurrentPosition(
-      position => {
-        sendToWebView({
-          callbackId,
-          module: 'location',
-          type: 'LOCATION_DATA',
-          success: true,
-          data: {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            altitude: position.coords.altitude,
-            heading: position.coords.heading,
-            speed: position.coords.speed,
-            timestamp: position.timestamp,
-          },
+    try {
+      // getCurrentPosition é baseado em callback, não em Promise — embrulhar
+      // aqui garante que erros (inclusive de dentro do callback de erro do
+      // próprio módulo nativo) caiam num único caminho de tratamento, em vez
+      // de ficarem soltos fora da cadeia de await/try-catch, sem nenhuma
+      // rede de segurança pra reportar de volta à WebView.
+      const position = await new Promise((resolve, reject) => {
+        Geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy,
+          timeout,
+          maximumAge,
+          forceRequestLocation: true,
+          showLocationDialog: true,
         });
-      },
-      error => {
-        sendToWebView({
-          callbackId,
-          module: 'location',
-          type: 'ERROR',
-          success: false,
-          message: error.message || 'Erro ao obter localização',
-          code: error.code,
-        });
-      },
-      {
-        enableHighAccuracy,
-        timeout,
-        maximumAge,
-        forceRequestLocation: true,
-        showLocationDialog: true,
-      },
-    );
+      });
+
+      sendToWebView({
+        callbackId,
+        module: 'location',
+        type: 'LOCATION_DATA',
+        success: true,
+        data: {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          altitude: position.coords.altitude,
+          heading: position.coords.heading,
+          speed: position.coords.speed,
+          timestamp: position.timestamp,
+        },
+      });
+    } catch (error) {
+      sendToWebView({
+        callbackId,
+        module: 'location',
+        type: 'ERROR',
+        success: false,
+        error: error?.message || 'Erro ao obter localização',
+        code: error?.code,
+      });
+    }
   };
 
   const handleAction = async payload => {
@@ -101,7 +106,7 @@ const LocationBridge = forwardRef(({sendToWebView}, ref) => {
             module: 'location',
             type: 'ERROR',
             success: false,
-            message: `Ação '${action}' não encontrada no LocationBridge.`,
+            error: `Ação '${action}' não encontrada no LocationBridge.`,
           });
         }
         break;
@@ -110,8 +115,6 @@ const LocationBridge = forwardRef(({sendToWebView}, ref) => {
 
   useImperativeHandle(ref, () => ({
     handleAction,
-    GET_CURRENT_LOCATION: (params, callbackId) =>
-      getCurrentLocation(params, callbackId),
   }));
 
   return null;

@@ -1,45 +1,73 @@
 import axios from 'axios';
-import RNFS from 'react-native-fs';
 
-export const downloadUpdateCode = async url => {
-  if (!url) return null;
+const normalizeUrl = url =>
+  url.startsWith('http://') ||
+  url.startsWith('https://') ||
+  url.startsWith('file://')
+    ? url
+    : `http://${url}`;
+
+/**
+ * Descobre se uma URL aponta pra um pacote .zip (vira módulo instalado,
+ * offline) ou uma página web comum (vira atalho, sempre carregado ao vivo).
+ *
+ * Não dá pra confiar na extensão da URL — o endpoint de download do
+ * Marketplace, por exemplo, é "/apps/<id>/download", sem ".zip" nenhum.
+ * Confia primeiro no Content-Type (um HEAD é rápido, só cabeçalho); se vier
+ * ambíguo ou o servidor não suportar HEAD, cai pra confirmar pela
+ * assinatura binária — todo arquivo zip começa com os bytes "PK".
+ */
+export const identifySource = async rawUrl => {
+  const url = normalizeUrl(rawUrl.trim());
 
   try {
-    const cleanUrl = url.trim();
+    const head = await axios.head(url, {
+      timeout: 5000,
+      validateStatus: () => true,
+    });
 
-    // 1. Trata arquivos locais extraídos pelo Marketplace
-    if (cleanUrl.startsWith('file://')) {
-      const filePath = cleanUrl.replace('file://', '');
-      const exists = await RNFS.exists(filePath);
-
-      if (!exists) {
-        console.warn(`[Helper] Arquivo local não encontrado: ${filePath}`);
-        return null;
-      }
-
-      // Lê o HTML direto do sistema de arquivos do Android/iOS
-      const localContent = await RNFS.readFile(filePath, 'utf8');
-      return localContent;
+    if (head.status < 400) {
+      const contentType = (head.headers?.['content-type'] || '').toLowerCase();
+      if (contentType.includes('zip')) return {type: 'module', url};
+      if (contentType.includes('html')) return {type: 'shortcut', url};
     }
+  } catch (err) {
+    // Servidor pode não suportar HEAD (alguns hosts simples rejeitam) —
+    // segue pro fallback binário abaixo em vez de desistir.
+  }
 
-    // 2. Formata URLs remota de rede (Dev ou Produção)
-    const formattedUrl =
-      cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')
-        ? cleanUrl
-        : `http://${cleanUrl}`;
+  const probe = await axios.get(url, {
+    timeout: 8000,
+    responseType: 'arraybuffer',
+    headers: {Range: 'bytes=0-3'},
+    validateStatus: () => true,
+  });
 
-    // 3. Download via Axios com timeouts e validação de status
+  if (probe.status >= 400) {
+    throw new Error(`Servidor retornou status HTTP ${probe.status}.`);
+  }
+
+  const bytes = new Uint8Array(probe.data);
+  const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b; // assinatura "PK"
+
+  return {type: isZip ? 'module' : 'shortcut', url};
+};
+
+/**
+ * @deprecated Usado hoje só pelo WebViewScreen (checkAndFetchUpdate) pra
+ * módulos "atalho" antigos, cacheados por HTML. Sai quando esse arquivo for
+ * atualizado — o novo modelo de atalho carrega sempre ao vivo, sem cache.
+ */
+export const downloadUpdateCode = async url => {
+  try {
+    const formattedUrl = normalizeUrl(url);
     const response = await axios.get(formattedUrl, {
       timeout: 5000,
       responseType: 'text',
-      validateStatus: status => status >= 200 && status < 300,
     });
-
     return response.data;
   } catch (err) {
-    console.log(`[Helper] Erro ao baixar update (${url}):`, err.message);
-    return null; // Retorna null para ativar o fallback de cache local na WebViewScreen
+    console.log('Erro ao baixar, usando cache...', err.message);
+    return null;
   }
 };
-
-export default downloadUpdateCode;

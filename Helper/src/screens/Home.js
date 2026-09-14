@@ -5,8 +5,7 @@ import {
   Alert,
   Platform,
   StatusBar,
-  DeviceEventEmitter,
-  TouchableOpacity,
+  ActivityIndicator,
   ScrollView,
   View,
 } from 'react-native';
@@ -26,6 +25,7 @@ import {
   CardIconContainer,
   CardInfo,
   DeleteButton,
+  ReinstallButton,
   EmptyContainer,
   EmptyTitle,
   EmptyText,
@@ -34,6 +34,7 @@ import {
   ModalOverlay,
   ModalHeader,
   ModalTitle,
+  ModalCloseButton,
   StyledInput,
   PrimaryButton,
   ButtonText,
@@ -46,7 +47,8 @@ import {
 } from './styles';
 
 import MarketplaceModal from '../components/MarketplaceModal';
-import {downloadUpdateCode} from '../Services/Helper';
+import {identifySource} from '../Services/Helper';
+import {installModuleFromUrl} from '../Services/ModuleInstaller';
 import {setMarketplaceBaseURL} from '../bridges/Marketplace';
 
 const DEBUG = false;
@@ -58,9 +60,11 @@ export default function HomeScreen({navigation}) {
   const [marketplaceVisible, setMarketplaceVisible] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   const [newLabel, setNewLabel] = useState('');
+  const [installing, setInstalling] = useState(false);
   const [configVisible, setConfigVisible] = useState(false);
   const [marketplaceIp, setMarketplaceIp] = useState('');
   const [ipHistory, setIpHistory] = useState([]);
+  const [reinstallingId, setReinstallingId] = useState(null);
 
   const insets = useSafeAreaInsets();
 
@@ -68,25 +72,6 @@ export default function HomeScreen({navigation}) {
     handlePermissions();
     loadApps();
     loadMarketplaceConfig();
-  }, []);
-
-  useEffect(() => {
-    const subscription = DeviceEventEmitter.addListener(
-      'UPDATE_APP_CACHE',
-      data => {
-        setApps(prevApps => {
-          const updated = prevApps.map(app =>
-            app.id === data.id
-              ? {...app, htmlLocal: data.html, lastUpdate: Date.now()}
-              : app,
-          );
-          saveApps(updated);
-          return updated;
-        });
-      },
-    );
-
-    return () => subscription.remove();
   }, []);
 
   const loadMarketplaceConfig = async () => {
@@ -166,27 +151,91 @@ export default function HomeScreen({navigation}) {
     setApps(updatedApps);
   };
 
+  // Detecta sozinho se a URL aponta pra um .zip (vira módulo instalado,
+  // offline) ou uma página comum (vira atalho, sempre carregado ao vivo) —
+  // o mesmo campo serve pros dois casos.
   const addApp = async () => {
-    if (!newUrl.trim()) return;
+    const trimmedUrl = newUrl.trim();
+    if (!trimmedUrl || installing) return;
 
+    setInstalling(true);
     try {
       const id = Date.now().toString();
-      const resultado = await downloadUpdateCode(newUrl.trim());
+      const {type, url} = await identifySource(trimmedUrl);
 
-      const newApp = {
-        id,
-        url: newUrl.trim(),
-        label: newLabel.trim() || newUrl.trim(),
-        htmlLocal: resultado,
-        lastUpdate: Date.now(),
-      };
+      let newApp;
+      if (type === 'module') {
+        const installed = await installModuleFromUrl(url, id);
+        newApp = {
+          id,
+          type: 'module',
+          label: newLabel.trim() || 'Módulo sem nome',
+          url: installed.url,
+          sourceUrl: url,
+          lastUpdate: Date.now(),
+        };
+      } else {
+        newApp = {
+          id,
+          type: 'shortcut',
+          label: newLabel.trim() || url,
+          url,
+          lastUpdate: Date.now(),
+        };
+      }
 
       await saveApps([...apps, newApp]);
       closeModal();
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível baixar o Módulo.');
+      Alert.alert(
+        'Erro',
+        error.message || 'Não foi possível adicionar esse endereço.',
+      );
+    } finally {
+      setInstalling(false);
     }
   };
+
+  // Reinstala só o CÓDIGO do módulo (apps/{id}/code). Dados salvos via
+  // Storage/File ficam em outro lugar e não são tocados — ver
+  // Services/ModuleInstaller.js para o porquê disso ser garantido.
+  const reinstallApp = useCallback(app => {
+    Alert.alert(
+      'Reinstalar Módulo',
+      `Isso baixa a versão mais recente de "${app.label}". Dados salvos pelo módulo (armazenamento e arquivos) não são afetados.`,
+      [
+        {text: 'Cancelar', style: 'cancel'},
+        {
+          text: 'Reinstalar',
+          onPress: async () => {
+            setReinstallingId(app.id);
+            try {
+              const installed = await installModuleFromUrl(
+                app.sourceUrl,
+                app.id,
+              );
+              setApps(prev => {
+                const updated = prev.map(a =>
+                  a.id === app.id
+                    ? {...a, url: installed.url, lastUpdate: Date.now()}
+                    : a,
+                );
+                saveApps(updated);
+                return updated;
+              });
+            } catch (error) {
+              Alert.alert(
+                'Erro',
+                error.message || 'Não foi possível reinstalar o módulo.',
+              );
+            } finally {
+              setReinstallingId(null);
+            }
+          },
+        },
+      ],
+    );
+  }, []);
 
   const deleteApp = useCallback(id => {
     Alert.alert(
@@ -223,6 +272,9 @@ export default function HomeScreen({navigation}) {
             minute: '2-digit',
           })
         : null;
+      const isShortcut = item.type === 'shortcut';
+      const canReinstall = item.type === 'module' && !!item.sourceUrl;
+      const isReinstalling = reinstallingId === item.id;
 
       return (
         <Card>
@@ -235,7 +287,11 @@ export default function HomeScreen({navigation}) {
               })
             }>
             <CardIconContainer>
-              <Icon name="cube-outline" size={20} color="#7C4DFF" />
+              <Icon
+                name={isShortcut ? 'globe-outline' : 'cube-outline'}
+                size={20}
+                color="#7C4DFF"
+              />
             </CardIconContainer>
             <CardInfo>
               <CardText numberOfLines={1}>{item.label}</CardText>
@@ -244,13 +300,24 @@ export default function HomeScreen({navigation}) {
               </CardSubtext>
             </CardInfo>
           </CardTouchable>
+          {canReinstall && (
+            <ReinstallButton
+              onPress={() => reinstallApp(item)}
+              disabled={isReinstalling}>
+              {isReinstalling ? (
+                <ActivityIndicator size="small" color="#7C4DFF" />
+              ) : (
+                <Icon name="refresh-outline" size={18} color="#7C4DFF" />
+              )}
+            </ReinstallButton>
+          )}
           <DeleteButton onPress={() => deleteApp(item.id)}>
             <Icon name="trash-outline" size={18} color="#FF4D4D" />
           </DeleteButton>
         </Card>
       );
     },
-    [navigation, deleteApp],
+    [navigation, deleteApp, reinstallApp, reinstallingId],
   );
 
   return (
@@ -289,8 +356,8 @@ export default function HomeScreen({navigation}) {
               <Icon name="layers-outline" size={44} color="#262632" />
               <EmptyTitle>Nenhum módulo instalado</EmptyTitle>
               <EmptyText>
-                Importe executando um endereço de rede local ou selecione no
-                Marketplace.
+                Adicione um módulo (.zip) ou um site pela URL, ou escolha algo
+                no Marketplace.
               </EmptyText>
             </EmptyContainer>
           }
@@ -302,34 +369,39 @@ export default function HomeScreen({navigation}) {
           <Icon name="add" size={28} color="#FFFFFF" />
         </Fab>
 
-        {/* Modal Adicionar Módulo */}
+        {/* Modal Adicionar Módulo ou Site */}
         <Modal visible={modalVisible} animationType="slide" transparent>
           <ModalOverlay behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ModalContent>
               <ModalHeader>
-                <ModalTitle>Adicionar Módulo</ModalTitle>
-                <TouchableOpacity onPress={closeModal}>
+                <ModalTitle>Adicionar Módulo ou Site</ModalTitle>
+                <ModalCloseButton onPress={closeModal}>
                   <Icon name="close" size={22} color="#707080" />
-                </TouchableOpacity>
+                </ModalCloseButton>
               </ModalHeader>
 
               <StyledInput
                 value={newLabel}
                 onChangeText={setNewLabel}
-                placeholder="Nome do Módulo"
+                placeholder="Nome (opcional)"
                 placeholderTextColor="#555565"
               />
               <StyledInput
                 value={newUrl}
                 onChangeText={setNewUrl}
-                placeholder="Ex: 192.168.1.102:3000"
+                placeholder="URL do .zip ou do site — ex: 192.168.1.102:3000"
                 placeholderTextColor="#555565"
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
+                editable={!installing}
               />
-              <PrimaryButton onPress={addApp}>
-                <ButtonText>Instalar Módulo</ButtonText>
+              <PrimaryButton onPress={addApp} disabled={installing}>
+                {installing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <ButtonText>Adicionar</ButtonText>
+                )}
               </PrimaryButton>
             </ModalContent>
           </ModalOverlay>
@@ -341,9 +413,9 @@ export default function HomeScreen({navigation}) {
             <ModalContent>
               <ModalHeader>
                 <ModalTitle>Configurar Marketplace</ModalTitle>
-                <TouchableOpacity onPress={() => setConfigVisible(false)}>
+                <ModalCloseButton onPress={() => setConfigVisible(false)}>
                   <Icon name="close" size={22} color="#707080" />
-                </TouchableOpacity>
+                </ModalCloseButton>
               </ModalHeader>
 
               <StyledInput

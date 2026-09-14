@@ -1,4 +1,4 @@
-import React, {forwardRef, useImperativeHandle} from 'react';
+import React, {forwardRef, useImperativeHandle, useEffect, useRef} from 'react';
 import {PermissionsAndroid, Platform} from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from 'react-native-fs';
@@ -6,6 +6,10 @@ import RNFS from 'react-native-fs';
 const audioRecorderPlayer = new AudioRecorderPlayer();
 
 const MicrophoneBridge = forwardRef(({sendToWebView}, ref) => {
+  // Evita START/STOP duplicados — dois toques rápidos no módulo web, ou uma
+  // segunda chamada chegando antes da primeira terminar.
+  const isRecordingRef = useRef(false);
+
   const requestMicPermission = async () => {
     if (Platform.OS === 'ios') return true;
 
@@ -51,6 +55,17 @@ const MicrophoneBridge = forwardRef(({sendToWebView}, ref) => {
   };
 
   const startRecording = async callbackId => {
+    if (isRecordingRef.current) {
+      sendToWebView({
+        callbackId,
+        module: 'mic',
+        type: 'ERROR',
+        success: false,
+        error: 'Já existe uma gravação em andamento.',
+      });
+      return;
+    }
+
     const hasPermission = await requestMicPermission();
     if (!hasPermission) {
       sendToWebView({
@@ -58,13 +73,14 @@ const MicrophoneBridge = forwardRef(({sendToWebView}, ref) => {
         module: 'mic',
         type: 'ERROR',
         success: false,
-        message: 'Permissão de microfone negada.',
+        error: 'Permissão de microfone negada.',
       });
       return;
     }
 
     try {
       const result = await audioRecorderPlayer.startRecorder();
+      isRecordingRef.current = true;
       sendToWebView({
         callbackId,
         module: 'mic',
@@ -84,9 +100,21 @@ const MicrophoneBridge = forwardRef(({sendToWebView}, ref) => {
   };
 
   const stopRecording = async callbackId => {
+    if (!isRecordingRef.current) {
+      sendToWebView({
+        callbackId,
+        module: 'mic',
+        type: 'ERROR',
+        success: false,
+        error: 'Nenhuma gravação em andamento.',
+      });
+      return;
+    }
+
     try {
       const result = await audioRecorderPlayer.stopRecorder();
       audioRecorderPlayer.removeRecordBackListener();
+      isRecordingRef.current = false;
 
       // Sanitiza caminho do arquivo para o RNFS (remove o prefixo file:// caso esteja presente)
       const cleanPath = result.replace('file://', '');
@@ -104,6 +132,7 @@ const MicrophoneBridge = forwardRef(({sendToWebView}, ref) => {
         uri: dataUri,
       });
     } catch (error) {
+      isRecordingRef.current = false;
       sendToWebView({
         callbackId,
         module: 'mic',
@@ -114,10 +143,20 @@ const MicrophoneBridge = forwardRef(({sendToWebView}, ref) => {
     }
   };
 
+  // Se a WebView fechar (navegação de volta, troca de módulo) com uma
+  // gravação ativa, encerra o recorder em vez de deixar o microfone "vivo"
+  // em segundo plano depois que o usuário já saiu da tela.
+  useEffect(() => {
+    return () => {
+      if (isRecordingRef.current) {
+        audioRecorderPlayer.stopRecorder().catch(() => {});
+        audioRecorderPlayer.removeRecordBackListener();
+      }
+    };
+  }, []);
+
   useImperativeHandle(ref, () => ({
     handleAction,
-    START_RECORDING: (params, callbackId) => startRecording(callbackId),
-    STOP_RECORDING: (params, callbackId) => stopRecording(callbackId),
   }));
 
   return null;

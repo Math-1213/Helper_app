@@ -35,7 +35,7 @@ export const IconButton = styled.TouchableOpacity.attrs({
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background-color: #141418;
+  background-color: #121216;
   align-items: center;
   justify-content: center;
   border: 1px solid #22222a;
@@ -47,7 +47,7 @@ export const Card = styled.View`
   margin: 0 20px 10px 20px;
   flex-direction: row;
   align-items: center;
-  border: 1px solid #202028;
+  border: 1px solid #22222a;
   padding: 12px 16px;
 `;
 
@@ -82,7 +82,7 @@ export const CardText = styled.Text`
 `;
 
 export const CardSubtext = styled.Text`
-  color: #6e6e80;
+  color: #707080;
   font-size: 12px;
 `;
 
@@ -92,6 +92,15 @@ export const DeleteButton = styled.TouchableOpacity.attrs({
   padding: 8px;
   border-radius: 8px;
   background-color: rgba(255, 77, 77, 0.08);
+`;
+
+export const ReinstallButton = styled.TouchableOpacity.attrs({
+  activeOpacity: 0.6,
+})`
+  padding: 8px;
+  border-radius: 8px;
+  background-color: rgba(124, 77, 255, 0.08);
+  margin-right: 6px;
 `;
 
 export const EmptyContainer = styled.View`
@@ -161,6 +170,13 @@ export const ModalTitle = styled.Text`
   color: #ffffff;
   font-size: 18px;
   font-weight: 700;
+`;
+
+export const ModalCloseButton = styled.TouchableOpacity.attrs({
+  activeOpacity: 0.7,
+  hitSlop: {top: 8, bottom: 8, left: 8, right: 8},
+})`
+  padding: 4px;
 `;
 
 export const StyledInput = styled.TextInput`

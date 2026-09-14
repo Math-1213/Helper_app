@@ -1,6 +1,6 @@
 import React, {forwardRef, useImperativeHandle} from 'react';
 
-const ConsoleBridge = forwardRef(({}, ref) => {
+const ConsoleBridge = forwardRef(({sendToWebView}, ref) => {
   const logMessage = (params = {}) => {
     const level = (params.level || 'info').toLowerCase();
     const message = params.message || '';
@@ -34,21 +34,29 @@ const ConsoleBridge = forwardRef(({}, ref) => {
   };
 
   useImperativeHandle(ref, () => ({
-    // Chamada direta
-    LOG: logMessage,
-
-    // Compatibilidade com o router unificado handleAction
     handleAction(payload) {
-      const {action, level, message, data, ...rest} = payload;
+      const {action, callbackId, level, message, data} = payload;
 
-      // Suporta tanto os dados no topo quanto dentro de params
-      const logParams = {
-        level: level || rest.params?.level || 'info',
-        message: message || rest.params?.message || '',
-        data: data !== undefined ? data : rest.params?.data,
-      };
+      if (action && action !== 'LOG') {
+        if (callbackId) {
+          sendToWebView({
+            callbackId,
+            success: false,
+            error: `Ação '${action}' não reconhecida no ConsoleBridge.`,
+          });
+        }
+        return;
+      }
 
-      logMessage(logParams);
+      logMessage({level, message, data});
+
+      // Logar é fire-and-forget por natureza, mas se um callbackId foi
+      // enviado, o lado da WebView pode estar esperando uma resposta —
+      // sem isso, uma chamada baseada em Promise ficaria pendurada pra
+      // sempre (mesma classe de bug corrigida no dispatcher central).
+      if (callbackId) {
+        sendToWebView({callbackId, success: true});
+      }
     },
   }));
 

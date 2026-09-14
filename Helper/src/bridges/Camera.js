@@ -5,7 +5,7 @@ import React, {
   useState,
   useEffect,
 } from 'react';
-import {View, StyleSheet, Linking} from 'react-native';
+import {View, StyleSheet} from 'react-native';
 import {
   Camera,
   useCameraDevice,
@@ -28,15 +28,14 @@ const CameraBridge = forwardRef(({sendToWebView}, ref) => {
   const [streaming, setStreaming] = useState(false);
   const isCapturingFrame = useRef(false);
 
-  useEffect(() => {
-    const requestCameraPermission = async () => {
-      const permission = await Camera.requestCameraPermission();
-      if (permission === 'denied') {
-        await Linking.openSettings();
-      }
-    };
-    requestCameraPermission();
-  }, []);
+  // Permissão é checada sob demanda (dentro de startStream/takePhoto), não
+  // mais aqui no mount — este bridge é montado pra TODO módulo, mesmo os que
+  // nunca tocam a câmera, então pedir permissão (e potencialmente abrir os
+  // Ajustes do sistema) no mount surpreendia o usuário sem motivo.
+  const ensureCameraPermission = async () => {
+    const result = await Camera.requestCameraPermission();
+    return result !== 'denied';
+  };
 
   // Loop de streaming seguro para evitar acumulação de I/O em disco
   useEffect(() => {
@@ -78,7 +77,19 @@ const CameraBridge = forwardRef(({sendToWebView}, ref) => {
     };
   }, [streaming, isActive, device]);
 
-  const startStream = (params = {}, callbackId) => {
+  const startStream = async (params = {}, callbackId) => {
+    const hasPermission = await ensureCameraPermission();
+    if (!hasPermission) {
+      sendToWebView({
+        callbackId,
+        module: 'camera',
+        type: 'ERROR',
+        success: false,
+        error: 'Permissão de câmera negada.',
+      });
+      return;
+    }
+
     if (
       params.position &&
       (params.position === 'front' || params.position === 'back')
@@ -103,14 +114,25 @@ const CameraBridge = forwardRef(({sendToWebView}, ref) => {
   };
 
   const takePhoto = async (params = {}, callbackId) => {
-    if (!isActive || !camera.current) {
-      const errorMsg = 'A câmera precisa estar ativa para capturar uma foto.';
+    const hasPermission = await ensureCameraPermission();
+    if (!hasPermission) {
       sendToWebView({
         callbackId,
         module: 'camera',
         type: 'ERROR',
         success: false,
-        message: errorMsg,
+        error: 'Permissão de câmera negada.',
+      });
+      return;
+    }
+
+    if (!isActive || !camera.current) {
+      sendToWebView({
+        callbackId,
+        module: 'camera',
+        type: 'ERROR',
+        success: false,
+        error: 'A câmera precisa estar ativa para capturar uma foto.',
       });
       return;
     }
@@ -151,13 +173,12 @@ const CameraBridge = forwardRef(({sendToWebView}, ref) => {
     }
   };
 
-  // Suporte duplo a chamadas diretas ou via handleAction
   const handleAction = async payload => {
     const {action, callbackId, ...params} = payload;
 
     switch (action) {
       case 'START_STREAM':
-        startStream(params, callbackId);
+        await startStream(params, callbackId);
         break;
       case 'STOP_STREAM':
         stopStream(params, callbackId);
@@ -165,10 +186,18 @@ const CameraBridge = forwardRef(({sendToWebView}, ref) => {
       case 'TAKE_PHOTO':
         await takePhoto(params, callbackId);
         break;
-      case 'SWITCH_CAMERA':
-        setPosition(prev => (prev === 'back' ? 'front' : 'back'));
-        if (callbackId) sendToWebView({callbackId, success: true, position});
+      case 'SWITCH_CAMERA': {
+        // Calcula o valor novo explicitamente: ler o state "position" logo
+        // depois de chamar setPosition ainda retornaria o valor ANTIGO, já
+        // que a atualização de state é assíncrona (bug: o callback reportava
+        // a posição de antes da troca).
+        const newPosition = position === 'back' ? 'front' : 'back';
+        setPosition(newPosition);
+        if (callbackId) {
+          sendToWebView({callbackId, success: true, position: newPosition});
+        }
         break;
+      }
       default:
         if (callbackId) {
           sendToWebView({
@@ -183,9 +212,6 @@ const CameraBridge = forwardRef(({sendToWebView}, ref) => {
 
   useImperativeHandle(ref, () => ({
     handleAction,
-    START_STREAM: (params, callbackId) => startStream(params, callbackId),
-    STOP_STREAM: (params, callbackId) => stopStream(params, callbackId),
-    TAKE_PHOTO: (params, callbackId) => takePhoto(params, callbackId),
   }));
 
   if (!device) return null;

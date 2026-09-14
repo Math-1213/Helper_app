@@ -4,9 +4,36 @@ export const handleBridgeMessage = (
   sendToWebView,
   context = {},
 ) => {
+  let callbackId;
+
+  const reportFailure = error => {
+    const message = error?.message || String(error) || 'Erro desconhecido.';
+    console.error(
+      `[Bridge:ERR] ❌ Erro na execução | Callback: ${
+        callbackId || 'N/A'
+      } | Msg: ${message}`,
+      error,
+    );
+    if (callbackId) {
+      sendToWebView({callbackId, success: false, error: message});
+    }
+  };
+
   try {
-    const payload = JSON.parse(event.nativeEvent.data);
-    const {module, action, params, callbackId} = payload;
+    const rawData = event.nativeEvent.data;
+    console.log(`[Bridge:IN] 📩 Mensagem recebida da WebView:`, rawData);
+
+    const payload = JSON.parse(rawData);
+    const {module, action, params} = payload;
+    callbackId = payload.callbackId;
+
+    console.log(
+      `[Bridge:PARSE] 🔍 Modulo: "${module}" | Ação: "${action}" | CallbackId: "${callbackId}"`,
+      {
+        params,
+        context,
+      },
+    );
 
     const modules = {
       camera: refs.camera?.current,
@@ -21,7 +48,10 @@ export const handleBridgeMessage = (
     const targetModule = modules[module];
 
     if (!targetModule) {
-      console.warn(`[Bridge] Módulo [${module}] não encontrado ou ref nula.`);
+      console.warn(
+        `[Bridge:WARN] ⚠️ Módulo [${module}] não encontrado ou ref nula. Módulos disponíveis:`,
+        Object.keys(modules).filter(k => !!modules[k]),
+      );
       if (callbackId) {
         sendToWebView({
           callbackId,
@@ -34,18 +64,42 @@ export const handleBridgeMessage = (
 
     // Caso o módulo utilize um manipulador central unificado (handleAction)
     if (typeof targetModule.handleAction === 'function') {
-      targetModule.handleAction({action, ...params, callbackId}, context);
+      console.log(`[Bridge:EXEC] 🚀 Chamando ${module}.handleAction()`);
+
+      Promise.resolve(
+        targetModule.handleAction({...params, action, callbackId}, context),
+      )
+        .then(result => {
+          console.log(
+            `[Bridge:OK] ✅ ${module}.handleAction() executado com sucesso:`,
+            result,
+          );
+          return result;
+        })
+        .catch(reportFailure);
       return;
     }
 
-    // Caso o módulo expor métodos diretamente pelo nome da action
+    // Caso o módulo exponha métodos diretamente pelo nome da action
     if (typeof targetModule[action] === 'function') {
-      targetModule[action](params, callbackId, context);
+      console.log(
+        `[Bridge:EXEC] 🚀 Chamando método direto: ${module}.${action}()`,
+      );
+
+      Promise.resolve(targetModule[action](params, callbackId, context))
+        .then(result => {
+          console.log(
+            `[Bridge:OK] ✅ ${module}.${action}() executado com sucesso:`,
+            result,
+          );
+          return result;
+        })
+        .catch(reportFailure);
       return;
     }
 
     console.warn(
-      `[Bridge] Ação [${action}] não encontrada no módulo [${module}]`,
+      `[Bridge:WARN] ⚠️ Ação [${action}] não encontrada no módulo [${module}].`,
     );
     if (callbackId) {
       sendToWebView({
@@ -55,6 +109,10 @@ export const handleBridgeMessage = (
       });
     }
   } catch (error) {
-    console.error('[Bridge] Erro ao processar protocolo Bridge:', error);
+    console.error(
+      `[Bridge:ERR] 💥 Erro ao processar/parsear JSON da WebView:`,
+      error,
+    );
+    reportFailure(error);
   }
 };

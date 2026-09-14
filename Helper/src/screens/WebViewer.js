@@ -131,7 +131,8 @@ export default function WebViewScreen({route, navigation}) {
       {/* Mini Topbar de Navegação */}
       <View style={styles.topBar}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.iconButton}
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
           onPress={() => {
             if (canGoBack && webviewRef.current) {
               webviewRef.current.goBack();
@@ -139,15 +140,16 @@ export default function WebViewScreen({route, navigation}) {
               navigation.goBack();
             }
           }}>
-          <Icon name="arrow-back" size={20} color="#FFFFFF" />
+          <Icon name="arrow-back" size={18} color="#EDEDF2" />
         </TouchableOpacity>
         <Text style={styles.topBarTitle} numberOfLines={1}>
-          {url}
+          {appId || url}
         </Text>
         <TouchableOpacity
-          style={styles.closeButton}
+          style={styles.iconButton}
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
           onPress={() => navigation.goBack()}>
-          <Icon name="close" size={20} color="#707080" />
+          <Icon name="close" size={18} color="#8C8C9E" />
         </TouchableOpacity>
       </View>
 
@@ -196,22 +198,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    backgroundColor: '#121216',
     borderBottomWidth: 1,
-    borderBottomColor: '#1A1A22',
+    borderBottomColor: '#22222A',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-  backButton: {
-    padding: 8,
-  },
-  closeButton: {
-    padding: 8,
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#1C1C24',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   topBarTitle: {
-    color: '#6E6E80',
-    fontSize: 12,
+    color: '#9494A6',
+    fontSize: 13,
+    fontWeight: '500',
     flex: 1,
     textAlign: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: 10,
   },
   webviewContainer: {
     flex: 1,

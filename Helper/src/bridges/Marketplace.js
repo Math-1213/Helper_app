@@ -3,7 +3,7 @@ import {Platform} from 'react-native';
 
 // Trata o localhost para emuladores Android vs iOS/Físico
 const DEFAULT_HOST =
-  Platform.OS === 'android' ? '10.0.2.2:3333' : '127.0.0.1:3333';
+  Platform.OS === 'android' ? '10.0.2.2:3000' : '127.0.0.1:3000';
 const DEFAULT_BASE_URL = `http://${DEFAULT_HOST}`;
 
 // Instância padrão do Axios

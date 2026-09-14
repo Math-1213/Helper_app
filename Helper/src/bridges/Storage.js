@@ -7,13 +7,15 @@ const StorageBridge = forwardRef(({sendToWebView}, ref) => {
 
   const saveItem = async ({key, value}, callbackId, context) => {
     try {
-      if (!key) throw new Error('A parâmetro "key" é obrigatório.');
+      if (!key) throw new Error('O parâmetro "key" é obrigatório.');
 
       const scopedKey = getScopedKey(key, context?.appId);
-      const stringValue =
-        typeof value === 'string' ? value : JSON.stringify(value);
 
-      await AsyncStorage.setItem(scopedKey, stringValue);
+      // Serializa sempre, mesmo para strings. Antes, uma string que
+      // parecesse JSON (ex: "123", "true") era gravada crua e, ao ser lida
+      // de volta em getItem, virava número/boolean por engano — o
+      // round-trip save/get não preservava o tipo original.
+      await AsyncStorage.setItem(scopedKey, JSON.stringify(value));
 
       sendToWebView({
         callbackId,
@@ -28,25 +30,26 @@ const StorageBridge = forwardRef(({sendToWebView}, ref) => {
         module: 'storage',
         type: 'ERROR',
         success: false,
-        message: err.message,
+        error: err.message,
       });
     }
   };
 
   const getItem = async ({key}, callbackId, context) => {
     try {
-      if (!key) throw new Error('A parâmetro "key" é obrigatório.');
+      if (!key) throw new Error('O parâmetro "key" é obrigatório.');
 
       const scopedKey = getScopedKey(key, context?.appId);
       const rawValue = await AsyncStorage.getItem(scopedKey);
 
-      // Tenta fazer o parse de JSON automaticamente se possível
-      let parsedValue = rawValue;
+      let parsedValue = null;
       if (rawValue !== null) {
         try {
           parsedValue = JSON.parse(rawValue);
         } catch {
-          parsedValue = rawValue; // Mantém como string caso não seja JSON
+          // Dado gravado antes dessa correção (string crua, não-JSON) —
+          // mantém compatibilidade com o que já estiver salvo.
+          parsedValue = rawValue;
         }
       }
 
@@ -64,14 +67,14 @@ const StorageBridge = forwardRef(({sendToWebView}, ref) => {
         module: 'storage',
         type: 'ERROR',
         success: false,
-        message: err.message,
+        error: err.message,
       });
     }
   };
 
   const removeItem = async ({key}, callbackId, context) => {
     try {
-      if (!key) throw new Error('A parâmetro "key" é obrigatório.');
+      if (!key) throw new Error('O parâmetro "key" é obrigatório.');
 
       const scopedKey = getScopedKey(key, context?.appId);
       await AsyncStorage.removeItem(scopedKey);
@@ -89,7 +92,7 @@ const StorageBridge = forwardRef(({sendToWebView}, ref) => {
         module: 'storage',
         type: 'ERROR',
         success: false,
-        message: err.message,
+        error: err.message,
       });
     }
   };
@@ -121,7 +124,7 @@ const StorageBridge = forwardRef(({sendToWebView}, ref) => {
         module: 'storage',
         type: 'ERROR',
         success: false,
-        message: err.message,
+        error: err.message,
       });
     }
   };
@@ -149,7 +152,7 @@ const StorageBridge = forwardRef(({sendToWebView}, ref) => {
             module: 'storage',
             type: 'ERROR',
             success: false,
-            message: `Ação '${action}' não reconhecida no StorageBridge.`,
+            error: `Ação '${action}' não reconhecida no StorageBridge.`,
           });
         }
         break;
@@ -158,13 +161,6 @@ const StorageBridge = forwardRef(({sendToWebView}, ref) => {
 
   useImperativeHandle(ref, () => ({
     handleAction,
-    STORAGE_SAVE: (params, callbackId, context) =>
-      saveItem(params, callbackId, context),
-    STORAGE_GET: (params, callbackId, context) =>
-      getItem(params, callbackId, context),
-    STORAGE_REMOVE: (params, callbackId, context) =>
-      removeItem(params, callbackId, context),
-    STORAGE_CLEAR: (callbackId, context) => clearStorage(callbackId, context),
   }));
 
   return null;
