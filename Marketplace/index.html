@@ -1,308 +1,823 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
-    <!-- Consome o Marketplace - Apenas para Testes -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Helper App Launcher</title>
+    <title>Helper App Launcher & Bridge Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
       :root {
-        --bg: #0f172a;
-        --card-bg: #1e293b;
-        --text: #f8fafc;
-        --text-muted: #94a3b8;
-        --accent: #38bdf8;
-        --accent-hover: #0284c7;
-        --border: #334155;
+        --bg-main: #0a0a0c;
+        --bg-surface: #121216;
+        --bg-card: #1c1c24;
+        --border-color: #22222a;
+        --accent-purple: #7c4dff;
+        --accent-purple-hover: #651fff;
+        --text-primary: #ededf2;
+        --text-muted: #8c8c9e;
       }
-
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
       body {
+        background-color: var(--bg-main);
+        color: var(--text-primary);
         font-family:
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          Roboto,
-          sans-serif;
-        background-color: var(--bg);
-        color: var(--text);
-        display: flex;
-        height: 100vh;
-        overflow: hidden;
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
       }
-
-      /* Sidebar / Catálogo */
-      aside {
-        width: 320px;
-        border-right: 1px solid var(--border);
-        display: flex;
-        flex-direction: column;
-        background-color: #0b1120;
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
       }
-
-      header {
-        padding: 16px;
-        border-bottom: 1px solid var(--border);
+      ::-webkit-scrollbar-track {
+        background: #0a0a0c;
       }
-
-      header h1 {
-        font-size: 1.2rem;
-        color: var(--accent);
-      }
-
-      .server-status {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-        margin-top: 4px;
-      }
-
-      .apps-list {
-        flex: 1;
-        overflow-y: auto;
-        padding: 12px;
-      }
-
-      .app-card {
-        background: var(--card-bg);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 12px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .app-card:hover {
-        border-color: var(--accent);
-        transform: translateY(-1px);
-      }
-
-      .app-card.active {
-        border-color: var(--accent);
-        background-color: #1e293b;
-        box-shadow: 0 0 0 1px var(--accent);
-      }
-
-      .app-title {
-        font-weight: 600;
-        font-size: 1rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .app-version {
-        font-size: 0.75rem;
-        background: var(--border);
-        padding: 2px 6px;
+      ::-webkit-scrollbar-thumb {
+        background: #22222a;
         border-radius: 4px;
-        color: var(--text-muted);
       }
-
-      .app-desc {
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        margin-top: 6px;
+      ::-webkit-scrollbar-thumb:hover {
+        background: #7c4dff;
       }
-
-      .app-actions {
-        margin-top: 10px;
-        display: flex;
-        gap: 8px;
-      }
-
-      .btn {
-        flex: 1;
-        padding: 6px 12px;
-        border-radius: 4px;
-        border: none;
-        font-size: 0.8rem;
-        font-weight: 500;
-        cursor: pointer;
-        text-align: center;
-        text-decoration: none;
-      }
-
-      .btn-primary {
-        background-color: var(--accent);
-        color: #000;
-      }
-
-      .btn-primary:hover {
-        background-color: var(--accent-hover);
-        color: #fff;
-      }
-
-      .btn-secondary {
-        background-color: var(--border);
-        color: var(--text);
-      }
-
-      /* Área Principal (Navegador/Iframe) */
-      main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        background-color: #000;
-      }
-
-      .toolbar {
-        height: 48px;
-        background-color: var(--card-bg);
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        padding: 0 16px;
-        gap: 12px;
-      }
-
-      .url-bar {
-        flex: 1;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-family: monospace;
-        font-size: 0.85rem;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-      }
-
-      iframe {
-        flex: 1;
-        width: 100%;
-        height: 100%;
-        border: none;
-        background-color: #fff;
-      }
-
-      .empty-state {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--text-muted);
-        flex-direction: column;
-        gap: 12px;
+      .mobile-frame {
+        border: 12px solid #1a1a22;
+        border-radius: 36px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        transition: all 0.3s ease;
       }
     </style>
   </head>
-  <body>
-    <!-- Sidebar: Lista de Módulos -->
-    <aside>
-      <header>
-        <h1>Helper Marketplace</h1>
-        <div id="status" class="server-status">Conectando ao servidor...</div>
-      </header>
-      <div id="appsContainer" class="apps-list">
-        <!-- Apps injetados via JS -->
+  <body class="h-screen flex flex-col overflow-hidden bg-[#0A0A0C]">
+    <header
+      class="h-14 bg-[#121216] border-b border-[#22222A] px-6 flex items-center justify-between shrink-0"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="w-8 h-8 rounded-lg bg-[#7C4DFF]/20 flex items-center justify-center text-[#7C4DFF]"
+        >
+          <i data-lucide="layers" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-sm tracking-wide text-white">
+            Helper Launcher & Bridge Simulator
+          </h1>
+          <p class="text-xs text-[#8C8C9E]" id="server-status">
+            Conectando ao servidor...
+          </p>
+        </div>
       </div>
-    </aside>
+      <div class="flex items-center gap-3">
+        <div
+          class="flex items-center bg-[#1C1C24] border border-[#22222A] rounded-lg px-3 py-1.5 text-xs text-[#8C8C9E] gap-2"
+        >
+          <i data-lucide="smartphone" class="w-3.5 h-3.5 text-[#7C4DFF]"></i>
+          <span>Tela:</span>
+          <select
+            id="devicePreset"
+            onchange="changeDevicePreset()"
+            class="bg-transparent text-white font-mono text-xs focus:outline-none"
+          >
+            <option value="420,750">Padrão (420x750)</option>
+            <option value="380,680">Compacto (380x680)</option>
+            <option value="360,640">Android Pequeno (360x640)</option>
+            <option value="480,850">Tela Grande (480x850)</option>
+          </select>
+        </div>
+        <div
+          class="flex items-center bg-[#1C1C24] border border-[#22222A] rounded-lg px-3 py-1.5 text-xs text-[#8C8C9E] gap-2"
+        >
+          <i data-lucide="server" class="w-3.5 h-3.5 text-[#7C4DFF]"></i>
+          <input
+            type="text"
+            id="apiUrlInput"
+            value="http://127.0.0.1:3000"
+            class="bg-transparent text-white font-mono text-xs focus:outline-none w-36"
+          />
+          <button
+            onclick="updateApiUrl()"
+            class="text-[#7C4DFF] hover:underline font-medium"
+          >
+            Salvar
+          </button>
+        </div>
+        <button
+          onclick="init()"
+          class="p-2 rounded-lg bg-[#1C1C24] hover:bg-[#22222A] text-white transition"
+        >
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
 
-    <!-- Main: Área do "Navegador" -->
-    <main>
-      <div class="toolbar">
-        <div id="urlBar" class="url-bar">Nenhum módulo aberto</div>
-      </div>
-      <div id="emptyState" class="empty-state">
-        <p>Selecione um módulo na lista para executar.</p>
-      </div>
-      <iframe id="appFrame" style="display: none"></iframe>
+    <main class="flex-1 flex overflow-hidden">
+      <aside
+        class="w-[360px] bg-[#0A0A0C] border-r border-[#22222A] flex flex-col shrink-0"
+      >
+        <div class="p-4 border-b border-[#22222A] bg-[#121216]/50">
+          <div class="flex items-center justify-between mb-3">
+            <h2
+              class="font-semibold text-sm text-white flex items-center gap-2"
+            >
+              <i data-lucide="grid" class="w-4 h-4 text-[#7C4DFF]"></i>
+              Marketplace
+            </h2>
+            <span
+              id="app-count-badge"
+              class="text-[10px] font-bold uppercase tracking-wider bg-[#7C4DFF]/20 text-[#7C4DFF] px-2 py-0.5 rounded-full"
+              >0 Módulos</span
+            >
+          </div>
+          <div class="relative">
+            <i
+              data-lucide="search"
+              class="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C9E]"
+            ></i>
+            <input
+              type="text"
+              id="searchInput"
+              oninput="filterApps()"
+              placeholder="Buscar módulos..."
+              class="w-full bg-[#1C1C24] border border-[#22222A] text-xs text-white rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-[#7C4DFF]"
+            />
+          </div>
+        </div>
+        <div
+          id="appsContainer"
+          class="flex-1 overflow-y-auto p-4 space-y-3"
+        ></div>
+      </aside>
+
+      <section
+        class="flex-1 bg-[#050507] flex flex-col items-center justify-center p-4 relative overflow-hidden"
+      >
+        <div
+          class="absolute inset-0 bg-[radial-gradient(#1c1c24_1px,transparent_1px)] [background-size:16px_16px] opacity-30 pointer-events-none"
+        ></div>
+        <div
+          id="mobileFrame"
+          class="mobile-frame w-[420px] h-[750px] bg-[#0A0A0C] flex flex-col overflow-hidden relative"
+        >
+          <div
+            class="h-12 bg-[#121216] border-b border-[#22222A] px-3 flex items-center justify-between shrink-0 z-10 shadow-md"
+          >
+            <button
+              onclick="handleGestureBack()"
+              class="w-8 h-8 rounded-full bg-[#1C1C24] flex items-center justify-center text-[#EDEDF2] hover:bg-[#22222A] transition"
+              title="Voltar (Gesture)"
+            >
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            </button>
+            <span
+              id="simulatorTitle"
+              class="text-xs font-medium text-[#9494A6] truncate max-w-[200px] text-center"
+              >Nenhum Módulo Executando</span
+            >
+            <button
+              onclick="closeApp()"
+              class="w-8 h-8 rounded-full bg-[#1C1C24] flex items-center justify-center text-[#8C8C9E] hover:bg-[#22222A] transition"
+              title="Fechar Módulo"
+            >
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="flex-1 relative bg-white overflow-hidden flex flex-col">
+            <div
+              id="emptyState"
+              class="absolute inset-0 bg-[#0A0A0C] flex flex-col items-center justify-center p-6 text-center z-20"
+            >
+              <div
+                class="w-16 h-16 rounded-2xl bg-[#1C1C24] border border-[#22222A] flex items-center justify-center text-[#8C8C9E] mb-4 shadow-inner"
+              >
+                <i data-lucide="smartphone" class="w-8 h-8"></i>
+              </div>
+              <h3 class="text-white font-medium text-sm mb-1">
+                Simulador WebView
+              </h3>
+              <p class="text-xs text-[#8C8C9E] max-w-[240px]">
+                Selecione um módulo ao lado para testar a integração nativa com
+                as Bridges.
+              </p>
+            </div>
+            <!-- Modificação 1: Injeção do Mock do React Native no carregamento do iframe -->
+            <iframe
+              id="appFrame"
+              class="w-full h-full border-none hidden flex-1"
+              onload="injectRNMock(this)"
+            ></iframe>
+          </div>
+          <div
+            class="h-8 bg-[#121216] border-t border-[#22222A] flex justify-around items-center shrink-0 px-6"
+          >
+            <button
+              onclick="handleGestureBack()"
+              class="text-[#8C8C9E] hover:text-white transition"
+              title="Voltar"
+            >
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <button
+              onclick="handleGestureHome()"
+              class="w-16 h-1 bg-[#22222A] hover:bg-[#7C4DFF] rounded-full transition cursor-pointer"
+              title="Ir para Home"
+            ></button>
+            <button
+              onclick="handleGestureRecents()"
+              class="text-[#8C8C9E] hover:text-white transition"
+              title="Aplicativos Recentes"
+            >
+              <i data-lucide="square" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <aside
+        class="w-[380px] bg-[#0A0A0C] border-l border-[#22222A] flex flex-col shrink-0"
+      >
+        <div
+          class="p-4 border-b border-[#22222A] bg-[#121216]/50 flex items-center justify-between"
+        >
+          <h2 class="font-semibold text-sm text-white flex items-center gap-2">
+            <i data-lucide="cpu" class="w-4 h-4 text-[#7C4DFF]"></i> Bridge
+            Inspector
+          </h2>
+          <span
+            class="text-[10px] font-mono bg-[#7C4DFF]/20 text-[#7C4DFF] px-2 py-0.5 rounded"
+            >Ativo</span
+          >
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+          <div
+            class="bg-[#121216] border border-[#22222A] rounded-xl p-3 space-y-3"
+          >
+            <h3
+              class="text-xs font-semibold text-white flex items-center gap-1.5"
+            >
+              <i data-lucide="send" class="w-3.5 h-3.5 text-[#7C4DFF]"></i>
+              Simular Retorno da Bridge
+            </h3>
+            <p class="text-[11px] text-[#8C8C9E]">
+              Injete eventos simulados ou capte hardware real diretamente na
+              WebView ativa.
+            </p>
+            <div>
+              <label
+                class="text-[10px] uppercase font-mono text-[#8C8C9E] block mb-1"
+                >Módulo Alvo</label
+              >
+              <select
+                id="bridgeTarget"
+                onchange="onBridgeChange()"
+                class="w-full bg-[#1C1C24] border border-[#22222A] text-xs text-white rounded-lg p-2 focus:outline-none"
+              >
+                <option value="location">LocationBridge (GPS)</option>
+                <option value="sensors">
+                  SensorBridge (Acelerômetro/Giroscópio)
+                </option>
+                <option value="mic">MicrophoneBridge (Áudio)</option>
+                <option value="camera">CameraBridge (Foto/Stream)</option>
+                <option value="file">FileBridge (Arquivos)</option>
+                <option value="storage">StorageBridge (AsyncStorage)</option>
+              </select>
+            </div>
+            <div id="dynamicBridgeControls" class="space-y-2 pt-1"></div>
+            <div>
+              <label
+                class="text-[10px] uppercase font-mono text-[#8C8C9E] block mb-1"
+                >Payload JSON de Resposta</label
+              >
+              <textarea
+                id="bridgePayload"
+                rows="4"
+                class="w-full bg-[#1C1C24] border border-[#22222A] font-mono text-[11px] text-white rounded-lg p-2 focus:outline-none"
+              ></textarea>
+            </div>
+            <button
+              onclick="injectBridgeMessage()"
+              class="w-full py-2 bg-[#7C4DFF] hover:bg-[#651FFF] text-white text-xs font-medium rounded-lg transition flex items-center justify-center gap-1.5"
+            >
+              <i data-lucide="play" class="w-3.5 h-3.5"></i> Enviar para WebView
+            </button>
+          </div>
+          <div
+            class="bg-[#121216] border border-[#22222A] rounded-xl p-3 flex flex-col h-48"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <h3
+                class="text-xs font-semibold text-white flex items-center gap-1.5"
+              >
+                <i
+                  data-lucide="terminal"
+                  class="w-3.5 h-3.5 text-[#7C4DFF]"
+                ></i>
+                Log de Comunicação
+              </h3>
+              <button
+                onclick="clearLogs()"
+                class="text-[10px] text-[#8C8C9E] hover:text-white"
+              >
+                Limpar
+              </button>
+            </div>
+            <div
+              id="bridgeLogs"
+              class="flex-1 bg-[#0A0A0C] border border-[#22222A] rounded-lg p-2 font-mono text-[10px] text-[#8C8C9E] overflow-y-auto space-y-1"
+            >
+              <div class="text-[#7C4DFF]">
+                [System] Aguardando interações das bridges...
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
     </main>
 
+    <div
+      id="hardwareModal"
+      class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50"
+    >
+      <div
+        class="bg-[#121216] border border-[#22222A] rounded-2xl p-4 w-[400px] flex flex-col gap-3 shadow-2xl"
+      >
+        <div class="flex items-center justify-between">
+          <h3
+            id="hardwareModalTitle"
+            class="text-xs font-semibold text-white flex items-center gap-2"
+          ></h3>
+          <button
+            onclick="closeHardwareModal()"
+            class="text-[#8C8C9E] hover:text-white"
+          >
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div
+          id="hardwarePreviewContainer"
+          class="bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center relative"
+        ></div>
+        <div class="flex gap-2">
+          <button
+            onclick="captureHardwareData()"
+            class="flex-1 py-2 bg-[#7C4DFF] hover:bg-[#651FFF] text-white text-xs font-medium rounded-lg transition"
+          >
+            Capturar e Enviar
+          </button>
+          <button
+            onclick="closeHardwareModal()"
+            class="py-2 px-4 bg-[#1C1C24] hover:bg-[#22222A] text-xs text-[#8C8C9E] hover:text-white rounded-lg transition"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
-      // Altere a URL do servidor caso esteja rodando em outro IP/porta
-      const API_URL = "http://127.0.0.1:3000";
-
-      const statusEl = document.getElementById("status");
-      const appsContainer = document.getElementById("appsContainer");
-      const appFrame = document.getElementById("appFrame");
-      const emptyState = document.getElementById("emptyState");
-      const urlBar = document.getElementById("urlBar");
-
+      let API_URL =
+        localStorage.getItem("marketplace_api_url") || "http://127.0.0.1:3000";
+      let allApps = [];
       let currentAppId = null;
+      let activeMediaStream = null;
 
-      // 1. Checa a saúde da API e carrega os módulos
+      // Modificação 2: Atualização dos payloads de câmera e microfone para corresponder ao index.html
+      const bridgePrototypes = {
+        location: {
+          module: "location",
+          type: "LOCATION_DATA",
+          data: { latitude: -22.7395, longitude: -47.6476, accuracy: 5.0 },
+        },
+        sensors: {
+          module: "sensors",
+          type: "ACCELEROMETER_DATA", // Pode alterar para GYROSCOPE_DATA manualmente no JSON se necessário
+          data: { x: 0.0, y: 9.8, z: 0.1 },
+        },
+        mic: {
+          module: "mic",
+          type: "RECORDING_STOPPED",
+          uri: "",
+        },
+        camera: {
+          module: "camera",
+          type: "FRAME",
+          data: "",
+        },
+        file: {
+          module: "file",
+          type: "FILE_PICKED",
+          data: { name: "imagem.png", base64: "" },
+        },
+        storage: {
+          module: "storage",
+          type: "STORAGE_GET",
+          data: { key: "user_session", value: '{"token":"abc123xyz"}' },
+        },
+      };
+
+      // Modificação 3: Injeção do objeto ReactNativeWebView no iframe
+      function injectRNMock(iframe) {
+        if (!iframe.contentWindow) return;
+        try {
+          iframe.contentWindow.eval(`
+            window.ReactNativeWebView = {
+              postMessage: function(data) {
+                window.parent.postMessage(data, "*");
+              }
+            };
+          `);
+        } catch (e) {
+          console.warn(
+            "[System] Aviso CORS: O app deve rodar na mesma origem para injetar o mock perfeitamente.",
+          );
+        }
+      }
+
+      // Modificação 4: Escuta de mensagens originárias da WebView
+      window.addEventListener("message", (event) => {
+        if (typeof event.data !== "string") return;
+        try {
+          const msg = JSON.parse(event.data);
+          logBridgeEvent(
+            `[Bridge:IN] Comando recebido: ${msg.module} -> ${msg.action}`,
+          );
+
+          if (msg.module === "mic" && msg.action === "START_RECORDING") {
+            document.getElementById("bridgeTarget").value = "mic";
+            onBridgeChange();
+
+            // Simula o retorno imediato de RECORDING_STARTED
+            const iframe = document.getElementById("appFrame");
+            iframe.contentWindow.postMessage(
+              JSON.stringify({ module: "mic", type: "RECORDING_STARTED" }),
+              "*",
+            );
+
+            openMicModal();
+          }
+        } catch (e) {}
+      });
+
+      document.getElementById("apiUrlInput").value = API_URL;
+
+      function updateApiUrl() {
+        const val = document.getElementById("apiUrlInput").value.trim();
+        if (val) {
+          API_URL = val;
+          localStorage.setItem("marketplace_api_url", API_URL);
+          init();
+        }
+      }
+
+      function changeDevicePreset() {
+        const val = document.getElementById("devicePreset").value.split(",");
+        const frame = document.getElementById("mobileFrame");
+        frame.style.width = val[0] + "px";
+        frame.style.height = val[1] + "px";
+        logBridgeEvent(`[Device] Tamanho alterado para ${val[0]}x${val[1]}px`);
+      }
+
+      function onBridgeChange() {
+        const target = document.getElementById("bridgeTarget").value;
+        const proto = bridgePrototypes[target];
+        document.getElementById("bridgePayload").value = JSON.stringify(
+          proto,
+          null,
+          2,
+        );
+        renderDynamicControls(target);
+      }
+
+      function renderDynamicControls(target) {
+        const container = document.getElementById("dynamicBridgeControls");
+        container.innerHTML = "";
+        if (target === "camera") {
+          container.innerHTML = `<button onclick="openCameraModal()" class="w-full py-1.5 bg-[#1C1C24] hover:bg-[#22222A] border border-[#22222A] text-xs text-white rounded-lg flex items-center justify-center gap-1.5 transition"><i data-lucide="camera" class="w-3.5 h-3.5 text-[#7C4DFF]"></i> Ativar Câmera do Computador</button>`;
+        } else if (target === "mic") {
+          container.innerHTML = `<button onclick="openMicModal()" class="w-full py-1.5 bg-[#1C1C24] hover:bg-[#22222A] border border-[#22222A] text-xs text-white rounded-lg flex items-center justify-center gap-1.5 transition"><i data-lucide="mic" class="w-3.5 h-3.5 text-[#7C4DFF]"></i> Gravar com Microfone Real</button>`;
+        } else if (target === "file") {
+          container.innerHTML = `<label class="w-full py-1.5 bg-[#1C1C24] hover:bg-[#22222A] border border-[#22222A] text-xs text-white rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer"><i data-lucide="upload" class="w-3.5 h-3.5 text-[#7C4DFF]"></i> Carregar Arquivo do Computador<input type="file" onchange="handleFileUpload(event)" class="hidden" /></label>`;
+        } else if (target === "sensors") {
+          container.innerHTML = `<div class="bg-[#1C1C24] p-2 rounded-lg border border-[#22222A] space-y-2 text-xs"><div class="flex items-center justify-between text-[11px] text-[#8C8C9E]"><span>Acelerômetro X/Y/Z</span><span id="sensorValDisplay" class="font-mono text-white">0, 9.8, 0.1</span></div><input type="range" min="-20" max="20" step="0.1" value="0" oninput="updateSensorValues(this.value, 'y')" class="w-full accent-[#7C4DFF]" /></div>`;
+        }
+        lucide.createIcons();
+      }
+
+      function updateSensorValues(val, axis) {
+        try {
+          const textarea = document.getElementById("bridgePayload");
+          let json = JSON.parse(textarea.value);
+          if (json.data) {
+            json.data.y = parseFloat(val);
+            document.getElementById("sensorValDisplay").textContent =
+              `${json.data.x}, ${json.data.y}, ${json.data.z}`;
+            textarea.value = JSON.stringify(json, null, 2);
+          }
+        } catch (e) {}
+      }
+
+      async function openCameraModal() {
+        const modal = document.getElementById("hardwareModal");
+        const title = document.getElementById("hardwareModalTitle");
+        const preview = document.getElementById("hardwarePreviewContainer");
+        title.innerHTML = `<i data-lucide="camera" class="w-4 h-4 text-[#7C4DFF]"></i> Câmera Web (Ao Vivo)`;
+        preview.innerHTML = `<video id="webcamVideo" autoplay playsinline class="w-full h-full object-cover"></video>`;
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        lucide.createIcons();
+        try {
+          activeMediaStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+          document.getElementById("webcamVideo").srcObject = activeMediaStream;
+        } catch (err) {
+          alert("Não foi possível acessar a câmera do computador.");
+          closeHardwareModal();
+        }
+      }
+
+      async function openMicModal() {
+        const modal = document.getElementById("hardwareModal");
+        const title = document.getElementById("hardwareModalTitle");
+        const preview = document.getElementById("hardwarePreviewContainer");
+        title.innerHTML = `<i data-lucide="mic" class="w-4 h-4 text-[#7C4DFF]"></i> Microfone (Gravação)`;
+        preview.innerHTML = `<div class="flex flex-col items-center justify-center gap-2 text-xs text-white"><div class="w-4 h-4 rounded-full bg-rose-500 animate-ping"></div><span>Gravando áudio do PC...</span></div>`;
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        lucide.createIcons();
+        try {
+          activeMediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false,
+          });
+          window.mediaRecorder = new MediaRecorder(activeMediaStream);
+          window.audioChunks = [];
+          window.mediaRecorder.ondataavailable = (e) =>
+            window.audioChunks.push(e.data);
+          window.mediaRecorder.onstop = () => {
+            const blob = new Blob(window.audioChunks, { type: "audio/webm" });
+            const reader = new FileReader();
+            // Modificação 5: Ajuste na injeção do payload de áudio com a propriedade 'uri' correta e auto-injeção
+            reader.onloadend = () => {
+              const textarea = document.getElementById("bridgePayload");
+              let json = JSON.parse(textarea.value);
+              json.uri = reader.result;
+              textarea.value = JSON.stringify(json, null, 2);
+              logBridgeEvent("[Hardware] Áudio real capturado e enviado.");
+              injectBridgeMessage();
+            };
+            reader.readAsDataURL(blob);
+          };
+          window.mediaRecorder.start();
+        } catch (err) {
+          alert("Erro ao acessar microfone.");
+          closeHardwareModal();
+        }
+      }
+
+      function captureHardwareData() {
+        const target = document.getElementById("bridgeTarget").value;
+        if (target === "camera") {
+          const video = document.getElementById("webcamVideo");
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 480;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL("image/jpeg");
+
+          const textarea = document.getElementById("bridgePayload");
+          let json = JSON.parse(textarea.value);
+
+          json.type = "FRAME";
+          json.data = dataUrl; // A câmara espera no 'data' e com o prefixo incluído
+
+          textarea.value = JSON.stringify(json, null, 2);
+          logBridgeImage(dataUrl);
+          logBridgeEvent("[Hardware] Frame capturado da webcam.");
+          injectBridgeMessage();
+        } else if (target === "mic") {
+          if (
+            window.mediaRecorder &&
+            window.mediaRecorder.state !== "inactive"
+          ) {
+            window.mediaRecorder.stop();
+          }
+        }
+        closeHardwareModal();
+      }
+
+      function closeHardwareModal() {
+        if (activeMediaStream) {
+          activeMediaStream.getTracks().forEach((track) => track.stop());
+          activeMediaStream = null;
+        }
+        const modal = document.getElementById("hardwareModal");
+        modal.classList.remove("flex");
+        modal.classList.add("hidden");
+      }
+
+      function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const textarea = document.getElementById("bridgePayload");
+          let json = JSON.parse(textarea.value);
+
+          // Remove o prefixo "data:image/jpeg;base64,"
+          const base64Clean = reader.result.split(",")[1];
+
+          json.data.name = file.name;
+          json.data.base64 = base64Clean;
+
+          textarea.value = JSON.stringify(json, null, 2);
+          logBridgeEvent(`[File] Ficheiro carregado: ${file.name}`);
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function logBridgeImage(dataUrl) {
+        const logsContainer = document.getElementById("bridgeLogs");
+        const line = document.createElement("div");
+        line.innerHTML = `[Captura] <img src="${dataUrl}" class="w-16 h-12 object-cover rounded mt-1 border border-[#22222A]"/>`;
+        logsContainer.appendChild(line);
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }
+
+      function handleGestureBack() {
+        logBridgeEvent("[Gesture] Ação de 'Voltar' disparada.");
+        const iframe = document.getElementById("appFrame");
+        if (iframe && iframe.contentWindow) {
+          try {
+            iframe.contentWindow.postMessage(
+              JSON.stringify({ action: "NATIVE_BACK" }),
+              "*",
+            );
+          } catch (e) {}
+        }
+      }
+
+      function handleGestureHome() {
+        logBridgeEvent("[Gesture] Botão 'Home' acionado.");
+        closeApp();
+      }
+
+      function handleGestureRecents() {
+        logBridgeEvent("[Gesture] Botão 'Recentes' acionado.");
+      }
+
       async function init() {
+        const statusEl = document.getElementById("server-status");
+        statusEl.textContent = "Conectando ao servidor...";
+        statusEl.className = "text-xs text-[#8C8C9E]";
+
         try {
           const healthRes = await fetch(`${API_URL}/`);
           const health = await healthRes.json();
 
           if (health.status === "ok") {
-            statusEl.textContent = `Servidor Online (Protocolo v${health.protocolVersion})`;
+            statusEl.textContent = `Online (Protocolo v${health.protocolVersion || "1.0"})`;
+            statusEl.className = "text-xs text-emerald-400 font-medium";
             loadApps();
-          } else {
-            statusEl.textContent = "Erro ao verificar servidor.";
+            onBridgeChange();
+            logBridgeEvent(`[Server] Conectado com sucesso em ${API_URL}`);
           }
         } catch (err) {
-          statusEl.textContent = "Servidor offline ou inalcançável.";
-          console.error(err);
+          statusEl.textContent = "Servidor Offline / Erro de CORS";
+          statusEl.className = "text-xs text-rose-400";
+          renderErrorState();
+          logBridgeEvent(`[Server] Falha ao conectar em ${API_URL}`);
         }
       }
 
-      // 2. Busca o catálogo em /apps.json
       async function loadApps() {
+        const appsContainer = document.getElementById("appsContainer");
+        const countBadge = document.getElementById("app-count-badge");
+
         try {
           const res = await fetch(`${API_URL}/apps.json`);
-          const apps = await res.json();
-
-          appsContainer.innerHTML = "";
-
-          if (apps.length === 0) {
-            appsContainer.innerHTML =
-              '<p style="color: var(--text-muted); font-size: 0.85rem;">Nenhum módulo encontrado na pasta apps/.</p>';
-            return;
-          }
-
-          apps.forEach((app) => {
-            const card = document.createElement("div");
-            card.className = `app-card ${currentAppId === app.id ? "active" : ""}`;
-
-            card.innerHTML = `
-            <div class="app-title">
-              <span>${app.label}</span>
-              ${app.version ? `<span class="app-version">v${app.version}</span>` : ""}
-            </div>
-            ${app.description ? `<div class="app-desc">${app.description}</div>` : ""}
-            <div class="app-actions">
-              <button class="btn btn-primary" onclick="openApp('${app.id}', event)">Executar</button>
-              <a href="${app.url}" class="btn btn-secondary" target="_blank" onclick="event.stopPropagation()">ZIP</a>
-            </div>
-          `;
-
-            card.onclick = () => openApp(app.id);
-            appsContainer.appendChild(card);
-          });
-        } catch (err) {
-          appsContainer.innerHTML =
-            '<p style="color: red;">Erro ao carregar os apps.</p>';
-          console.error(err);
-        }
+          allApps = await res.json();
+          countBadge.textContent = `${allApps.length} Módulos`;
+          renderAppsList(allApps);
+        } catch (err) {}
       }
 
-      // 3. Executa o módulo dentro do iframe
+      function renderAppsList(apps) {
+        const appsContainer = document.getElementById("appsContainer");
+        appsContainer.innerHTML = "";
+
+        apps.forEach((app) => {
+          const isActive = currentAppId === app.id;
+          const card = document.createElement("div");
+          card.className = `p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 ${isActive ? "bg-[#1C1C24] border-[#7C4DFF] shadow-lg shadow-[#7C4DFF]/10" : "bg-[#121216] border-[#22222A] hover:border-[#7C4DFF]/50 hover:bg-[#1C1C24]/50"}`;
+
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-lg bg-[#7C4DFF]/10 border border-[#7C4DFF]/20 flex items-center justify-center text-[#7C4DFF] shrink-0">
+                  <i data-lucide="cube" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-xs text-white leading-snug">${app.label}</h3>
+                  <p class="text-[11px] text-[#8C8C9E] font-mono mt-0.5">${app.id}</p>
+                </div>
+              </div>
+              ${app.version ? `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#22222A] text-[#8C8C9E]">v${app.version}</span>` : ""}
+            </div>
+            ${app.description ? `<p class="text-xs text-[#8C8C9E] line-clamp-2 leading-relaxed">${app.description}</p>` : ""}
+            <div class="flex items-center gap-2 pt-1 border-t border-[#22222A]/60">
+              <button onclick="openApp('${app.id}', event)" class="flex-1 py-1.5 px-3 bg-[#7C4DFF] hover:bg-[#651FFF] text-white text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> Executar
+              </button>
+            </div>
+          `;
+          card.onclick = () => openApp(app.id);
+          appsContainer.appendChild(card);
+        });
+
+        lucide.createIcons();
+      }
+
+      function filterApps() {
+        const query = document
+          .getElementById("searchInput")
+          .value.toLowerCase();
+        const filtered = allApps.filter(
+          (app) =>
+            app.label.toLowerCase().includes(query) ||
+            app.id.toLowerCase().includes(query),
+        );
+        renderAppsList(filtered);
+      }
+
       function openApp(appId, event) {
         if (event) event.stopPropagation();
-
         currentAppId = appId;
         const appUrl = `${API_URL}/apps/${appId}/`;
 
-        // Atualiza interface
-        urlBar.textContent = appUrl;
+        document.getElementById("simulatorTitle").textContent = appId;
+        const appFrame = document.getElementById("appFrame");
         appFrame.src = appUrl;
-        appFrame.style.display = "block";
-        emptyState.style.display = "none";
+        appFrame.classList.remove("hidden");
+        document.getElementById("emptyState").classList.add("hidden");
 
-        // Atualiza destaques dos cards
-        loadApps();
+        renderAppsList(allApps);
+        logBridgeEvent(`[Module] Módulo '${appId}' iniciado na WebView.`);
+      }
+
+      function closeApp() {
+        currentAppId = null;
+        document.getElementById("simulatorTitle").textContent =
+          "Nenhum Módulo Executando";
+        const appFrame = document.getElementById("appFrame");
+        appFrame.src = "about:blank";
+        appFrame.classList.add("hidden");
+        document.getElementById("emptyState").classList.remove("hidden");
+
+        renderAppsList(allApps);
+        logBridgeEvent(`[Module] Módulo fechado.`);
+      }
+
+      function injectBridgeMessage() {
+        const rawText = document.getElementById("bridgePayload").value;
+        try {
+          const parsed = JSON.parse(rawText);
+          const iframe = document.getElementById("appFrame");
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage(JSON.stringify(parsed), "*");
+            logBridgeEvent(
+              `[Bridge:OUT] Payload injetado para [${parsed.module}]: ${parsed.type}`,
+            );
+          } else {
+            alert("Nenhum módulo aberto no simulador para receber a mensagem.");
+          }
+        } catch (e) {
+          alert("JSON inválido no payload de simulação.");
+        }
+      }
+
+      function logBridgeEvent(text) {
+        const logsContainer = document.getElementById("bridgeLogs");
+        const line = document.createElement("div");
+        const time = new Date().toLocaleTimeString();
+        line.textContent = `[${time}] ${text}`;
+        logsContainer.appendChild(line);
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }
+
+      function clearLogs() {
+        document.getElementById("bridgeLogs").innerHTML =
+          '<div class="text-[#7C4DFF]">[System] Logs limpos.</div>';
+      }
+
+      function renderErrorState() {
+        const appsContainer = document.getElementById("appsContainer");
+        appsContainer.innerHTML = `
+          <div class="p-4 bg-[#121216] border border-[#22222A] rounded-xl text-center space-y-3">
+            <i data-lucide="wifi-off" class="w-8 h-8 text-rose-500 mx-auto"></i>
+            <p class="text-xs font-semibold text-white">Servidor Indisponível</p>
+          </div>
+        `;
+        lucide.createIcons();
       }
 
       init();
