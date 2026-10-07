@@ -100,7 +100,6 @@ export default function HomeScreen({navigation}) {
       await AsyncStorage.setItem('marketplaceIp', formattedIp);
       setMarketplaceBaseURL(formattedIp);
 
-      // Atualiza o histórico limpando duplicados e limitando a 5 entradas
       const updatedHistory = [
         formattedIp,
         ...ipHistory.filter(item => item !== formattedIp),
@@ -151,9 +150,6 @@ export default function HomeScreen({navigation}) {
     setApps(updatedApps);
   };
 
-  // Detecta sozinho se a URL aponta pra um .zip (vira módulo instalado,
-  // offline) ou uma página comum (vira atalho, sempre carregado ao vivo) —
-  // o mesmo campo serve pros dois casos.
   const addApp = async () => {
     const trimmedUrl = newUrl.trim();
     if (!trimmedUrl || installing) return;
@@ -196,13 +192,10 @@ export default function HomeScreen({navigation}) {
     }
   };
 
-  // Reinstala só o CÓDIGO do módulo (apps/{id}/code). Dados salvos via
-  // Storage/File ficam em outro lugar e não são tocados — ver
-  // Services/ModuleInstaller.js para o porquê disso ser garantido.
   const reinstallApp = useCallback(app => {
     Alert.alert(
       'Reinstalar Módulo',
-      `Isso baixa a versão mais recente de "${app.label}". Dados salvos pelo módulo (armazenamento e arquivos) não são afetados.`,
+      `Isso baixa a versão mais recente de "${app.label}". Dados salvos pelo módulo não são afetados.`,
       [
         {text: 'Cancelar', style: 'cancel'},
         {
@@ -266,12 +259,14 @@ export default function HomeScreen({navigation}) {
 
   const renderAppItem = useCallback(
     ({item}) => {
-      const formattedDate = item.lastUpdate
-        ? new Date(item.lastUpdate).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })
-        : null;
+      const formattedDate =
+        item.lastUpdate && !isNaN(new Date(item.lastUpdate).getTime())
+          ? new Date(item.lastUpdate).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : null;
+
       const isShortcut = item.type === 'shortcut';
       const canReinstall = item.type === 'module' && !!item.sourceUrl;
       const isReinstalling = reinstallingId === item.id;
@@ -289,17 +284,18 @@ export default function HomeScreen({navigation}) {
             <CardIconContainer>
               <Icon
                 name={isShortcut ? 'globe-outline' : 'cube-outline'}
-                size={20}
+                size={22}
                 color="#7C4DFF"
               />
             </CardIconContainer>
             <CardInfo>
               <CardText numberOfLines={1}>{item.label}</CardText>
               <CardSubtext numberOfLines={1}>
-                {item.url} {formattedDate ? `• ${formattedDate}` : ''}
+                {item.url} {formattedDate ? ` • ${formattedDate}` : ''}
               </CardSubtext>
             </CardInfo>
           </CardTouchable>
+
           {canReinstall && (
             <ReinstallButton
               onPress={() => reinstallApp(item)}
@@ -307,12 +303,13 @@ export default function HomeScreen({navigation}) {
               {isReinstalling ? (
                 <ActivityIndicator size="small" color="#7C4DFF" />
               ) : (
-                <Icon name="refresh-outline" size={18} color="#7C4DFF" />
+                <Icon name="refresh-outline" size={20} color="#7C4DFF" />
               )}
             </ReinstallButton>
           )}
+
           <DeleteButton onPress={() => deleteApp(item.id)}>
-            <Icon name="trash-outline" size={18} color="#FF4D4D" />
+            <Icon name="trash-outline" size={20} color="#FF4D4D" />
           </DeleteButton>
         </Card>
       );
@@ -328,17 +325,17 @@ export default function HomeScreen({navigation}) {
           <HeaderTitle>Helper</HeaderTitle>
           <HeaderActions>
             <IconButton onPress={() => setConfigVisible(true)}>
-              <Icon name="settings-outline" size={18} color="#FFFFFF" />
+              <Icon name="settings-outline" size={20} color="#FFFFFF" />
             </IconButton>
 
             {DEBUG && (
               <IconButton onPress={() => navigation.navigate('Lab')}>
-                <Icon name="construct-outline" size={18} color="#7C4DFF" />
+                <Icon name="construct-outline" size={20} color="#7C4DFF" />
               </IconButton>
             )}
 
             <IconButton onPress={() => setMarketplaceVisible(true)}>
-              <Icon name="grid-outline" size={18} color="#FFFFFF" />
+              <Icon name="grid-outline" size={20} color="#FFFFFF" />
             </IconButton>
           </HeaderActions>
         </Header>
@@ -346,14 +343,15 @@ export default function HomeScreen({navigation}) {
         <FlatList
           data={apps}
           keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingBottom: insets.bottom + 80,
+            paddingBottom: insets.bottom + 90,
             paddingTop: 12,
           }}
           renderItem={renderAppItem}
           ListEmptyComponent={
             <EmptyContainer>
-              <Icon name="layers-outline" size={44} color="#262632" />
+              <Icon name="layers-outline" size={48} color="#262632" />
               <EmptyTitle>Nenhum módulo instalado</EmptyTitle>
               <EmptyText>
                 Adicione um módulo (.zip) ou um site pela URL, ou escolha algo
@@ -364,19 +362,19 @@ export default function HomeScreen({navigation}) {
         />
 
         <Fab
-          style={{bottom: insets.bottom + 20}}
+          style={{bottom: insets.bottom + 24}}
           onPress={() => setModalVisible(true)}>
-          <Icon name="add" size={28} color="#FFFFFF" />
+          <Icon name="add" size={30} color="#FFFFFF" />
         </Fab>
 
         {/* Modal Adicionar Módulo ou Site */}
-        <Modal visible={modalVisible} animationType="slide" transparent>
+        <Modal visible={modalVisible} animationType="fade" transparent>
           <ModalOverlay behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ModalContent>
               <ModalHeader>
                 <ModalTitle>Adicionar Módulo ou Site</ModalTitle>
                 <ModalCloseButton onPress={closeModal}>
-                  <Icon name="close" size={22} color="#707080" />
+                  <Icon name="close" size={24} color="#707080" />
                 </ModalCloseButton>
               </ModalHeader>
 
@@ -389,7 +387,7 @@ export default function HomeScreen({navigation}) {
               <StyledInput
                 value={newUrl}
                 onChangeText={setNewUrl}
-                placeholder="URL do .zip ou do site — ex: 192.168.1.102:3000"
+                placeholder="URL do .zip ou site (ex: 192.168.1.102:3000)"
                 placeholderTextColor="#555565"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -408,13 +406,13 @@ export default function HomeScreen({navigation}) {
         </Modal>
 
         {/* Modal Configuração de IP com Histórico */}
-        <Modal visible={configVisible} animationType="slide" transparent>
+        <Modal visible={configVisible} animationType="fade" transparent>
           <ModalOverlay behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ModalContent>
               <ModalHeader>
                 <ModalTitle>Configurar Marketplace</ModalTitle>
                 <ModalCloseButton onPress={() => setConfigVisible(false)}>
-                  <Icon name="close" size={22} color="#707080" />
+                  <Icon name="close" size={24} color="#707080" />
                 </ModalCloseButton>
               </ModalHeader>
 
@@ -429,9 +427,12 @@ export default function HomeScreen({navigation}) {
               />
 
               {ipHistory.length > 0 && (
-                <View style={{marginBottom: 8}}>
+                <View style={{marginBottom: 16, marginTop: 4}}>
                   <IpHistoryLabel>IPs Recentes</IpHistoryLabel>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled">
                     {ipHistory.map(ip => (
                       <IpBadge key={ip} onPress={() => setMarketplaceIp(ip)}>
                         <IpBadgeText>{ip}</IpBadgeText>

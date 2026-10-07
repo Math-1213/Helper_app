@@ -9,10 +9,9 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import RNFS from 'react-native-fs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import api from '../bridges/Marketplace';
-import {unzip} from 'react-native-zip-archive';
+import {installModuleFromUrl} from '../Services/ModuleInstaller';
 
 export default function MarketplaceModal({
   visible,
@@ -48,65 +47,21 @@ export default function MarketplaceModal({
 
     setDownloadingAppId(app.id);
 
-    // Estrutura de diretórios
-    const appDir = `${RNFS.DocumentDirectoryPath}/${app.id}`;
-    const tempZipPath = `${RNFS.CachesDirectoryPath}/${app.id}_temp.zip`;
-
     try {
-      // 1. Limpa instalações antigas ou incompletas no diretório de destino
-      if (await RNFS.exists(appDir)) {
-        await RNFS.unlink(appDir);
-      }
-      if (await RNFS.exists(tempZipPath)) {
-        await RNFS.unlink(tempZipPath);
-      }
+      const installed = await installModuleFromUrl(app.url, app.id);
 
-      // 2. Cria o diretório de destino limpo
-      await RNFS.mkdir(appDir);
-
-      // 3. Faz o download do pacote .zip para a pasta temporária de Cache
-      const result = await RNFS.downloadFile({
-        fromUrl: app.url,
-        toFile: tempZipPath,
-      }).promise;
-
-      if (result.statusCode !== 200) {
-        throw new Error(`Servidor retornou status HTTP ${result.statusCode}`);
-      }
-
-      // 4. Descompacta no diretório final
-      await unzip(tempZipPath, appDir);
-
-      // 5. Deleta o ZIP temporário
-      await RNFS.unlink(tempZipPath);
-
-      // 6. Confirma arquivo de entrada
-      const entryPath = `${appDir}/index.html`;
-      const hasEntry = await RNFS.exists(entryPath);
-
-      if (!hasEntry) {
-        throw new Error('Pacote inválido: index.html não encontrado no ZIP.');
-      }
-
-      const installedApp = {
+      onInstall({
         id: app.id,
+        type: 'module',
         label: app.label,
-        url: `file://${entryPath}`,
-      };
-
-      onInstall(installedApp);
+        url: installed.url,
+        sourceUrl: app.url,
+        lastUpdate: Date.now(),
+      });
       onClose();
     } catch (err) {
       console.log(`[Marketplace] Erro na instalação de ${app.id}:`, err);
       Alert.alert('Erro ao Instalar', err.message || 'Falha ao baixar módulo.');
-
-      // Cleanup em caso de erro na instalação
-      try {
-        if (await RNFS.exists(appDir)) await RNFS.unlink(appDir);
-        if (await RNFS.exists(tempZipPath)) await RNFS.unlink(tempZipPath);
-      } catch (cleanErr) {
-        console.log('[Marketplace] Erro no cleanup:', cleanErr);
-      }
     } finally {
       setDownloadingAppId(null);
     }
@@ -123,28 +78,49 @@ export default function MarketplaceModal({
       <TouchableOpacity
         style={styles.card}
         onPress={() => installApp(item)}
-        disabled={downloadingAppId !== null}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.title}>{item.label}</Text>
-          {isDownloading && <ActivityIndicator size="small" color="#7C4DFF" />}
+        disabled={downloadingAppId !== null}
+        activeOpacity={0.7}>
+        <View style={styles.cardIconContainer}>
+          <Icon name="extension" size={24} color="#7C4DFF" />
         </View>
-        <Text style={styles.url} numberOfLines={1}>
-          {item.url}
-        </Text>
+
+        <View style={styles.cardTextContainer}>
+          <Text style={styles.title}>{item.label}</Text>
+          <Text style={styles.url} numberOfLines={1}>
+            {item.url}
+          </Text>
+        </View>
+
+        <View style={styles.actionIconContainer}>
+          {isDownloading ? (
+            <ActivityIndicator size="small" color="#7C4DFF" />
+          ) : (
+            <Icon name="file-download" size={24} color="#444450" />
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.headerRow}>
-            <Text style={styles.header}>Marketplace</Text>
+            <View style={styles.headerTitleContainer}>
+              <Icon
+                name="storefront"
+                size={24}
+                color="#FFF"
+                style={styles.headerIcon}
+              />
+              <Text style={styles.header}>Marketplace</Text>
+            </View>
             <TouchableOpacity
               onPress={fetchApps}
               disabled={loading || downloadingAppId !== null}
-              style={styles.reloadButton}>
+              style={styles.reloadButton}
+              activeOpacity={0.7}>
               {loading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
@@ -157,41 +133,58 @@ export default function MarketplaceModal({
             <ActivityIndicator
               size="large"
               color="#7C4DFF"
-              style={{marginVertical: 30}}
+              style={{marginVertical: 40}}
             />
           ) : (
             <FlatList
               data={availableApps}
               keyExtractor={item => item.id}
               renderItem={renderItem}
-              contentContainerStyle={{paddingBottom: 10}}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 !loading && (
-                  <Text style={styles.emptyText}>
-                    Todos os módulos disponíveis já estão instalados!
-                  </Text>
+                  <View style={styles.emptyContainer}>
+                    <Icon
+                      name="check-circle-outline"
+                      size={48}
+                      color="#2E2E38"
+                    />
+                    <Text style={styles.emptyText}>
+                      Todos os módulos disponíveis já estão instalados.
+                    </Text>
+                  </View>
                 )
               }
             />
           )}
 
-          <View style={styles.divider} />
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.manualButton}
+              disabled={downloadingAppId !== null}
+              onPress={() => {
+                onClose();
+                openManualAdd();
+              }}
+              activeOpacity={0.8}>
+              <Icon
+                name="add-link"
+                size={20}
+                color="#FFF"
+                style={styles.buttonIcon}
+              />
+              <Text style={styles.manualText}>Adicionar URL Manual</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.manualButton}
-            disabled={downloadingAppId !== null}
-            onPress={() => {
-              onClose();
-              openManualAdd();
-            }}>
-            <Text style={styles.manualText}>Adicionar App Manualmente</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={onClose}
-            disabled={downloadingAppId !== null}>
-            <Text style={styles.closeText}>Fechar</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              disabled={downloadingAppId !== null}
+              activeOpacity={0.7}>
+              <Text style={styles.closeText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -201,85 +194,134 @@ export default function MarketplaceModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'flex-end',
   },
   container: {
     backgroundColor: '#121216',
-    borderRadius: 20,
-    borderWidth: 1,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '85%',
+    borderTopWidth: 1,
     borderColor: '#22222a',
-    padding: 20,
-    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -4},
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    marginBottom: 20,
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    marginRight: 10,
   },
   header: {
     color: '#FFF',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   reloadButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#1C1C24',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#22222A',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  card: {
-    backgroundColor: '#121216',
-    borderWidth: 1,
-    borderColor: '#22222a',
-    padding: 14,
-    borderRadius: 16,
-    marginBottom: 10,
+  listContent: {
+    paddingBottom: 20,
   },
-  cardHeader: {
+  card: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: '#1C1C24',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2A2A35',
+  },
+  cardIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(124, 77, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  cardTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
   },
   title: {
     color: '#FFF',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
+    marginBottom: 4,
   },
   url: {
-    color: '#707080',
-    fontSize: 12,
-    marginTop: 4,
+    color: '#8A8A9E',
+    fontSize: 13,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#22222a',
-    marginVertical: 15,
+  actionIconContainer: {
+    paddingLeft: 12,
   },
-  manualButton: {
-    backgroundColor: '#7C4DFF',
-    padding: 12,
-    borderRadius: 12,
+  emptyContainer: {
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  manualText: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  closeText: {
-    color: '#707080',
-    textAlign: 'center',
-    paddingVertical: 4,
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
   emptyText: {
     color: '#555565',
     textAlign: 'center',
-    marginVertical: 20,
+    marginTop: 16,
+    fontSize: 15,
+    lineHeight: 22,
+    paddingHorizontal: 20,
+  },
+  footer: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderColor: '#22222a',
+    paddingTop: 20,
+  },
+  manualButton: {
+    flexDirection: 'row',
+    backgroundColor: '#7C4DFF',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  manualText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  closeButton: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#1C1C24',
+    alignItems: 'center',
+  },
+  closeText: {
+    color: '#A0A0B0',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

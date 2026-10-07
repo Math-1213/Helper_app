@@ -4,14 +4,10 @@ import {unzip} from 'react-native-zip-archive';
 /**
  * Baixa e instala (ou reinstala) o CÓDIGO de um módulo a partir de uma URL
  * de download de .zip. Usado pelo Marketplace, pela detecção automática do
- * "Adicionar Módulo" manual, e pelo botão de reinstalar — é sempre o mesmo
- * processo, só muda de onde é disparado.
+ * "Adicionar Módulo" manual, e pelo botão de reinstalar.
  *
  * Importante: só mexe em apps/{appId}/code/. Dados gravados pelo módulo via
- * FileBridge vivem em apps/{appId}/data/ — uma pasta irmã, nunca tocada por
- * este processo — e via StorageBridge no AsyncStorage, isolado por
- * appId e completamente fora do sistema de arquivos. Reinstalar troca o
- * código sem apagar nada que o módulo tenha salvo.
+ * FileBridge vivem em apps/{appId}/data/ e via StorageBridge no AsyncStorage.
  */
 export const installModuleFromUrl = async (downloadUrl, appId) => {
   const codeDir = `${RNFS.DocumentDirectoryPath}/apps/${appId}/code`;

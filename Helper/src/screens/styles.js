@@ -5,6 +5,34 @@ export const Container = styled.View`
   background-color: #0a0a0c;
 `;
 
+export const TopBar = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: #121216;
+  border-bottom-width: 1px;
+  border-bottom-color: #22222a;
+  elevation: 4;
+  shadow-color: #000;
+  shadow-offset: 0px 2px;
+  shadow-opacity: 0.25;
+  shadow-radius: 4px;
+`;
+
+export const TopBarTitle = styled.Text`
+  color: #9494a6;
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  text-align: center;
+  margin-horizontal: 10px;
+`;
+
+export const WebViewContainer = styled.View`
+  flex: 1;
+`;
+
 export const Content = styled.View`
   flex: 1;
 `;
@@ -29,16 +57,13 @@ export const HeaderActions = styled.View`
   gap: 10px;
 `;
 
-export const IconButton = styled.TouchableOpacity.attrs({
-  activeOpacity: 0.7,
-})`
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background-color: #121216;
+export const IconButton = styled.TouchableOpacity`
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  background-color: #1c1c24;
   align-items: center;
   justify-content: center;
-  border: 1px solid #22222a;
 `;
 
 export const Card = styled.View`
