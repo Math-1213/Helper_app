@@ -129,10 +129,10 @@
     <div class="card">
       <h2>Bridges Disponíveis</h2>
 
-      <!-- Ajuste os payloads de acordo com a estrutura que suas bridges esperam no handleBridgeMessage -->
+      <!-- Storage: Save -->
       <button
         onclick="
-          testBridge('storage', 'setItem', {
+          testBridge('storage', 'STORAGE_SAVE', {
             key: 'teste_key',
             value: 'Dados salvos com sucesso!',
           })
@@ -141,12 +141,30 @@
         Testar Storage Bridge (Save)
       </button>
 
-      <button onclick="testBridge('location', 'getCurrentPosition', {})">
+      <!-- Storage: Get -->
+      <button
+        onclick="
+          testBridge('storage', 'STORAGE_GET', {
+            key: 'teste_key',
+          })
+        "
+      >
+        Testar Storage Bridge (Get)
+      </button>
+
+      <!-- Location -->
+      <button onclick="testBridge('location', 'GET_CURRENT_LOCATION', {})">
         Testar Location Bridge
       </button>
 
+      <!-- Console -->
       <button
-        onclick="testBridge('console', 'log', { message: 'Olá do WebView!' })"
+        onclick="
+          testBridge('console', 'LOG', {
+            level: 'info',
+            message: 'Olá do WebView!',
+          })
+        "
       >
         Testar Console Bridge
       </button>

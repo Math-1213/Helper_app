@@ -35,7 +35,7 @@ export default function WebViewScreen({route, navigation}) {
 
   const [displaySource, setDisplaySource] = useState(() => {
     if (htmlLocal) return {html: htmlLocal, baseUrl: url};
-    return {uri: url.startsWith('http') ? url : `http://${url}`};
+    return {uri: url.startsWith('http') ? url : `https://${url}`};
   });
 
   const bridgeRefs = {
@@ -77,7 +77,7 @@ export default function WebViewScreen({route, navigation}) {
         return;
       }
 
-      const targetUrl = url.startsWith('http') ? url : `http://${url}`;
+      const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
       try {
         await axios.head(targetUrl, {
@@ -111,7 +111,28 @@ export default function WebViewScreen({route, navigation}) {
     webviewRef.current?.postMessage(JSON.stringify(payload));
   };
 
+  // --- VALIDAÇÃO DE ORIGEM DAS MENSAGENS ---
   const handleMessage = event => {
+    const originUrl = event.nativeEvent.url;
+
+    // Permite origens locais, HTML injetado direto (null / string vazia / about:blank) ou arquivos locais
+    const isLocalOrigin =
+      !originUrl ||
+      originUrl === 'null' ||
+      originUrl === 'about:blank' ||
+      originUrl.startsWith('file://');
+
+    if (!isLocalOrigin) {
+      const allowedTarget = url.startsWith('http') ? url : `https://${url}`;
+
+      if (!originUrl.startsWith(allowedTarget)) {
+        console.warn(
+          `[Security:BLOCKED] Mensagem rejeitada da origem não autorizada: ${originUrl}`,
+        );
+        return;
+      }
+    }
+
     handleBridgeMessage(event, bridgeRefs, sendToWebView, {appId});
   };
 
@@ -161,11 +182,12 @@ export default function WebViewScreen({route, navigation}) {
           onNavigationStateChange={navState => setCanGoBack(navState.canGoBack)}
           javaScriptEnabled
           domStorageEnabled
-          allowFileAccess
+          allowFileAccess={true}
           allowUniversalAccessFromFileURLs={false}
           allowFileAccessFromFileURLs={false}
-          originWhitelist={['http://*', 'https://*', 'file://*']}
-          mixedContentMode="compatibility"
+          originWhitelist={['https://*', 'file://*']}
+          mixedContentMode="never"
+          javaScriptCanOpenWindowsAutomatically={false}
           style={{flex: 1, backgroundColor: 'transparent'}}
         />
       </WebViewContainer>
