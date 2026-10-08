@@ -2,19 +2,25 @@ import React, {forwardRef, useImperativeHandle} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const StorageBridge = forwardRef(({sendToWebView}, ref) => {
-  // Constrói a chave isolada por app (ex: "@finco:user_theme")
-  const getScopedKey = (key, appId = 'global') => `@${appId}:${key}`;
+  // Sanitiza o appId e a key para impedir injeção de delimitadores ou traversal
+  const sanitize = str => String(str || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  const getScopedKey = (key, rawAppId) => {
+    if (!rawAppId) {
+      throw new Error(
+        'Identificador do aplicativo (appId) não foi fornecido no contexto.',
+      );
+    }
+    const safeAppId = sanitize(rawAppId);
+    const safeKey = String(key).replace(/[^a-zA-Z0-9_\.-]/g, '_');
+    return `@app_${safeAppId}:${safeKey}`;
+  };
 
   const saveItem = async ({key, value}, callbackId, context) => {
     try {
       if (!key) throw new Error('O parâmetro "key" é obrigatório.');
 
       const scopedKey = getScopedKey(key, context?.appId);
-
-      // Serializa sempre, mesmo para strings. Antes, uma string que
-      // parecesse JSON (ex: "123", "true") era gravada crua e, ao ser lida
-      // de volta em getItem, virava número/boolean por engano — o
-      // round-trip save/get não preservava o tipo original.
       await AsyncStorage.setItem(scopedKey, JSON.stringify(value));
 
       sendToWebView({
@@ -47,8 +53,6 @@ const StorageBridge = forwardRef(({sendToWebView}, ref) => {
         try {
           parsedValue = JSON.parse(rawValue);
         } catch {
-          // Dado gravado antes dessa correção (string crua, não-JSON) —
-          // mantém compatibilidade com o que já estiver salvo.
           parsedValue = rawValue;
         }
       }
@@ -99,13 +103,16 @@ const StorageBridge = forwardRef(({sendToWebView}, ref) => {
 
   const clearStorage = async (callbackId, context) => {
     try {
-      const appId = context?.appId || 'global';
-      const prefix = `@${appId}:`;
+      if (!context?.appId) {
+        throw new Error(
+          'Identificador do aplicativo (appId) não foi fornecido.',
+        );
+      }
 
-      // Busca todas as chaves gravadas no AsyncStorage
+      const safeAppId = sanitize(context.appId);
+      const prefix = `@app_${safeAppId}:`;
+
       const allKeys = await AsyncStorage.getAllKeys();
-
-      // Filtra apenas as chaves do módulo atual
       const appKeys = allKeys.filter(k => k.startsWith(prefix));
 
       if (appKeys.length > 0) {

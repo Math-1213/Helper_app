@@ -44,9 +44,11 @@ import {
   IpHistoryLabel,
   IpBadge,
   IpBadgeText,
+  SettingsButton,
 } from './styles';
 
 import MarketplaceModal from '../components/MarketplaceModal';
+import ModuleSettingsModal from '../components/ModuleSettingsModal';
 import {ModuleIcon} from '../components/ModuleIcon';
 
 import {identifySource} from '../Services/Helper';
@@ -67,6 +69,7 @@ export default function HomeScreen({navigation}) {
   const [marketplaceIp, setMarketplaceIp] = useState('');
   const [ipHistory, setIpHistory] = useState([]);
   const [reinstallingId, setReinstallingId] = useState(null);
+  const [selectedAppForModal, setSelectedAppForModal] = useState(null);
 
   const insets = useSafeAreaInsets();
 
@@ -270,8 +273,6 @@ export default function HomeScreen({navigation}) {
           : null;
 
       const isShortcut = item.type === 'shortcut';
-      const canReinstall = item.type === 'module' && !!item.sourceUrl;
-      const isReinstalling = reinstallingId === item.id;
 
       return (
         <Card>
@@ -290,38 +291,19 @@ export default function HomeScreen({navigation}) {
             <CardInfo>
               <CardText numberOfLines={1}>{item.label}</CardText>
               <CardSubtext numberOfLines={1}>
-                {formattedDate}{' '}
-                {`${
-                  item.description
-                    ? item.description
-                    : String(item.url).replace(
-                        'file:///data/user/0/com.helper/files/apps/Main/code/',
-                        ' ',
-                      )
-                }`}
+                {item.url} {formattedDate ? ` • ${formattedDate}` : ''}
               </CardSubtext>
             </CardInfo>
           </CardTouchable>
 
-          {canReinstall && (
-            <ReinstallButton
-              onPress={() => reinstallApp(item)}
-              disabled={isReinstalling}>
-              {isReinstalling ? (
-                <ActivityIndicator size="small" color="#7C4DFF" />
-              ) : (
-                <Icon name="refresh-outline" size={20} color="#7C4DFF" />
-              )}
-            </ReinstallButton>
-          )}
-
-          <DeleteButton onPress={() => deleteApp(item.id)}>
-            <Icon name="trash-outline" size={20} color="#FF4D4D" />
-          </DeleteButton>
+          {/* Substituição dos botões antigos por um único botão de engrenagem */}
+          <SettingsButton onPress={() => setSelectedAppForModal(item)}>
+            <Icon name="settings-outline" size={20} color="#8F8EA8" />
+          </SettingsButton>
         </Card>
       );
     },
-    [navigation, deleteApp, reinstallApp, reinstallingId],
+    [navigation],
   );
 
   return (
@@ -456,6 +438,15 @@ export default function HomeScreen({navigation}) {
           </ModalOverlay>
         </Modal>
 
+        {/* Modal de Configuração de Permissões */}
+        <ModuleSettingsModal
+          visible={selectedAppForModal !== null}
+          app={selectedAppForModal}
+          onClose={() => setSelectedAppForModal(null)}
+          onReinstall={reinstallApp}
+          onDelete={deleteApp}
+          isReinstalling={reinstallingId === selectedAppForModal?.id}
+        />
         <MarketplaceModal
           visible={marketplaceVisible}
           onClose={() => setMarketplaceVisible(false)}

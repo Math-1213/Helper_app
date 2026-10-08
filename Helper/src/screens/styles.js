@@ -255,3 +255,18 @@ export const IpBadgeText = styled.Text`
   font-size: 13px;
   font-weight: 500;
 `;
+
+export const SettingsButton = styled.TouchableOpacity.attrs({
+  activeOpacity: 0.7,
+  hitSlop: {top: 10, bottom: 10, left: 10, right: 10},
+})`
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: #181820;
+  justify-content: center;
+  align-items: center;
+  margin-left: 8px;
+  border-width: 1px;
+  border-color: #262632;
+`;
