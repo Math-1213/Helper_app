@@ -86,9 +86,11 @@ export default function MarketplaceModal({
 
         <View style={styles.cardTextContainer}>
           <Text style={styles.title}>{item.label}</Text>
-          <Text style={styles.url} numberOfLines={1}>
-            {item.url}
-          </Text>
+          {item.description && (
+            <Text style={styles.description} numberOfLines={1}>
+              {item.description}
+            </Text>
+          )}
         </View>
 
         <View style={styles.actionIconContainer}>
@@ -270,7 +272,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  url: {
+  description: {
     color: '#8A8A9E',
     fontSize: 13,
   },

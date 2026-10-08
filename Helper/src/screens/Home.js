@@ -47,6 +47,8 @@ import {
 } from './styles';
 
 import MarketplaceModal from '../components/MarketplaceModal';
+import {ModuleIcon} from '../components/ModuleIcon';
+
 import {identifySource} from '../Services/Helper';
 import {installModuleFromUrl} from '../Services/ModuleInstaller';
 import {setMarketplaceBaseURL} from '../bridges/Marketplace';
@@ -282,16 +284,21 @@ export default function HomeScreen({navigation}) {
               })
             }>
             <CardIconContainer>
-              <Icon
-                name={isShortcut ? 'globe-outline' : 'cube-outline'}
-                size={22}
-                color="#7C4DFF"
-              />
+              <ModuleIcon appId={item.id} isShortcut={isShortcut} />
             </CardIconContainer>
+
             <CardInfo>
               <CardText numberOfLines={1}>{item.label}</CardText>
               <CardSubtext numberOfLines={1}>
-                {item.url} {formattedDate ? ` • ${formattedDate}` : ''}
+                {formattedDate}{' '}
+                {`${
+                  item.description
+                    ? item.description
+                    : String(item.url).replace(
+                        'file:///data/user/0/com.helper/files/apps/Main/code/',
+                        ' ',
+                      )
+                }`}
               </CardSubtext>
             </CardInfo>
           </CardTouchable>
