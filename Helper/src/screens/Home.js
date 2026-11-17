@@ -1,19 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   FlatList,
   Modal,
   Alert,
   Platform,
   StatusBar,
-  DeviceEventEmitter,
-  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+  View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  requestMultiple,
-  PERMISSIONS,
-  RESULTS,
-} from 'react-native-permissions';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {requestMultiple, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -28,84 +25,100 @@ import {
   CardIconContainer,
   CardInfo,
   DeleteButton,
+  ReinstallButton,
   EmptyContainer,
+  EmptyTitle,
   EmptyText,
   Fab,
   ModalContent,
   ModalOverlay,
   ModalHeader,
   ModalTitle,
+  ModalCloseButton,
   StyledInput,
   PrimaryButton,
   ButtonText,
   HeaderActions,
   IconButton,
   Content,
+  IpHistoryLabel,
+  IpBadge,
+  IpBadgeText,
+  SettingsButton,
 } from './styles';
 
 import MarketplaceModal from '../components/MarketplaceModal';
-import { downloadUpdateCode } from '../Services/Helper';
-import { setMarketplaceBaseURL } from '../bridges/Marketplace'; // Importe a função que criamos
+import ModuleSettingsModal from '../components/ModuleSettingsModal';
+import {ModuleIcon} from '../components/ModuleIcon';
 
-const debug = false;
-export default function HomeScreen({ navigation }) {
+import {identifySource} from '../Services/Helper';
+import {installModuleFromUrl} from '../Services/ModuleInstaller';
+import {setMarketplaceBaseURL} from '../bridges/Marketplace';
+
+const DEBUG = false;
+const IP_HISTORY_KEY = 'marketplaceIpHistory';
+
+export default function HomeScreen({navigation}) {
   const [apps, setApps] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [marketplaceVisible, setMarketplaceVisible] = useState(false);
   const [newUrl, setNewUrl] = useState('');
   const [newLabel, setNewLabel] = useState('');
+  const [installing, setInstalling] = useState(false);
   const [configVisible, setConfigVisible] = useState(false);
   const [marketplaceIp, setMarketplaceIp] = useState('');
+  const [ipHistory, setIpHistory] = useState([]);
+  const [reinstallingId, setReinstallingId] = useState(null);
+  const [selectedAppForModal, setSelectedAppForModal] = useState(null);
 
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     handlePermissions();
     loadApps();
-    loadMarketplaceIp(); // Carrega o IP salvo ao abrir o app
+    loadMarketplaceConfig();
   }, []);
 
-  useEffect(() => {
-    const subscription = DeviceEventEmitter.addListener(
-      'UPDATE_APP_CACHE',
-      data => {
-        setApps(prevApps => {
-          const updated = prevApps.map(app =>
-            app.id === data.id
-              ? { ...app, htmlLocal: data.html, lastUpdate: Date.now() }
-              : app,
-          );
-          saveApps(updated);
-          return updated;
-        });
-      },
-    );
-
-    return () => subscription.remove();
-  }, []);
-
-  const loadMarketplaceIp = async () => {
+  const loadMarketplaceConfig = async () => {
     try {
       const savedIp = await AsyncStorage.getItem('marketplaceIp');
+      const historyStr = await AsyncStorage.getItem(IP_HISTORY_KEY);
+
       if (savedIp) {
         setMarketplaceIp(savedIp);
-        setMarketplaceBaseURL(savedIp); // Aplica na instância do Axios
+        setMarketplaceBaseURL(savedIp);
+      }
+      if (historyStr) {
+        setIpHistory(JSON.parse(historyStr));
       }
     } catch (error) {
-      console.log('Erro ao carregar IP do marketplace', error);
+      console.log('Erro ao carregar configurações de IP', error);
     }
   };
 
-  // Salva o novo IP
   const saveMarketplaceIp = async () => {
-    if (!marketplaceIp) return;
+    if (!marketplaceIp.trim()) return;
+
+    const formattedIp = marketplaceIp.trim();
+
     try {
-      await AsyncStorage.setItem('marketplaceIp', marketplaceIp);
-      setMarketplaceBaseURL(marketplaceIp); // Atualiza o Axios imediatamente
+      await AsyncStorage.setItem('marketplaceIp', formattedIp);
+      setMarketplaceBaseURL(formattedIp);
+
+      const updatedHistory = [
+        formattedIp,
+        ...ipHistory.filter(item => item !== formattedIp),
+      ].slice(0, 5);
+
+      setIpHistory(updatedHistory);
+      await AsyncStorage.setItem(
+        IP_HISTORY_KEY,
+        JSON.stringify(updatedHistory),
+      );
+
       setConfigVisible(false);
-      Alert.alert('Sucesso', 'Endereço do Marketplace atualizado!');
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível salvar a configuração.');
+      Alert.alert('Erro', 'Não foi possível salvar o endereço.');
     }
   };
 
@@ -126,7 +139,7 @@ export default function HomeScreen({ navigation }) {
       if (denied) {
         Alert.alert(
           'Permissões Necessárias',
-          'Alguns recursos do Helper podem não funcionar sem as permissões aceitas.',
+          'Alguns recursos podem não funcionar sem as permissões solicitadas.',
         );
       }
     }
@@ -143,42 +156,105 @@ export default function HomeScreen({ navigation }) {
   };
 
   const addApp = async () => {
-    if (!newUrl) return;
+    const trimmedUrl = newUrl.trim();
+    if (!trimmedUrl || installing) return;
 
+    setInstalling(true);
     try {
       const id = Date.now().toString();
-      const resultado = await downloadUpdateCode(newUrl);
+      const {type, url} = await identifySource(trimmedUrl);
 
-      const newApp = {
-        id,
-        url: newUrl,
-        label: newLabel || newUrl,
-        htmlLocal: resultado,
-        lastUpdate: Date.now(),
-      };
+      let newApp;
+      if (type === 'module') {
+        const installed = await installModuleFromUrl(url, id);
+        newApp = {
+          id,
+          type: 'module',
+          label: newLabel.trim() || 'Módulo sem nome',
+          url: installed.url,
+          sourceUrl: url,
+          lastUpdate: Date.now(),
+        };
+      } else {
+        newApp = {
+          id,
+          type: 'shortcut',
+          label: newLabel.trim() || url,
+          url,
+          lastUpdate: Date.now(),
+        };
+      }
 
-      const updatedApps = [...apps, newApp];
-      await saveApps(updatedApps);
+      await saveApps([...apps, newApp]);
       closeModal();
     } catch (error) {
-      console.log(error);
-      Alert.alert('Erro', 'Não foi possível baixar o Modulo.');
+      Alert.alert(
+        'Erro',
+        error.message || 'Não foi possível adicionar esse endereço.',
+      );
+    } finally {
+      setInstalling(false);
     }
   };
 
-  const deleteApp = id => {
-    Alert.alert('Excluir App', 'Deseja realmente remover este Modulo?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: () => {
-          const updatedApps = apps.filter(app => app.id !== id);
-          saveApps(updatedApps);
+  const reinstallApp = useCallback(app => {
+    Alert.alert(
+      'Reinstalar Módulo',
+      `Isso baixa a versão mais recente de "${app.label}". Dados salvos pelo módulo não são afetados.`,
+      [
+        {text: 'Cancelar', style: 'cancel'},
+        {
+          text: 'Reinstalar',
+          onPress: async () => {
+            setReinstallingId(app.id);
+            try {
+              const installed = await installModuleFromUrl(
+                app.sourceUrl,
+                app.id,
+              );
+              setApps(prev => {
+                const updated = prev.map(a =>
+                  a.id === app.id
+                    ? {...a, url: installed.url, lastUpdate: Date.now()}
+                    : a,
+                );
+                saveApps(updated);
+                return updated;
+              });
+            } catch (error) {
+              Alert.alert(
+                'Erro',
+                error.message || 'Não foi possível reinstalar o módulo.',
+              );
+            } finally {
+              setReinstallingId(null);
+            }
+          },
         },
-      },
-    ]);
-  };
+      ],
+    );
+  }, []);
+
+  const deleteApp = useCallback(id => {
+    Alert.alert(
+      'Excluir Módulo',
+      'Deseja remover este módulo permanentemente?',
+      [
+        {text: 'Cancelar', style: 'cancel'},
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => {
+            setApps(prev => {
+              const updated = prev.filter(app => app.id !== id);
+              saveApps(updated);
+              return updated;
+            });
+          },
+        },
+      ],
+    );
+  }, []);
 
   const closeModal = () => {
     setModalVisible(false);
@@ -186,22 +262,64 @@ export default function HomeScreen({ navigation }) {
     setNewLabel('');
   };
 
-  return (
-    <Container bottom={insets.bottom}>
-      <Content top={insets.top + 30}>
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0C" />
+  const renderAppItem = useCallback(
+    ({item}) => {
+      const formattedDate =
+        item.lastUpdate && !isNaN(new Date(item.lastUpdate).getTime())
+          ? new Date(item.lastUpdate).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : null;
 
+      const isShortcut = item.type === 'shortcut';
+
+      return (
+        <Card>
+          <CardTouchable
+            onPress={() =>
+              navigation.navigate('WebView', {
+                url: item.url,
+                htmlLocal: item.htmlLocal,
+                appId: item.id,
+              })
+            }>
+            <CardIconContainer>
+              <ModuleIcon appId={item.id} isShortcut={isShortcut} />
+            </CardIconContainer>
+
+            <CardInfo>
+              <CardText numberOfLines={1}>{item.label}</CardText>
+              <CardSubtext numberOfLines={1}>
+                {item.url} {formattedDate ? ` • ${formattedDate}` : ''}
+              </CardSubtext>
+            </CardInfo>
+          </CardTouchable>
+
+          {/* Substituição dos botões antigos por um único botão de engrenagem */}
+          <SettingsButton onPress={() => setSelectedAppForModal(item)}>
+            <Icon name="settings-outline" size={20} color="#8F8EA8" />
+          </SettingsButton>
+        </Card>
+      );
+    },
+    [navigation],
+  );
+
+  return (
+    <Container>
+      <StatusBar barStyle="light-content" backgroundColor="#0A0A0C" />
+      <Content style={{paddingTop: insets.top}}>
         <Header>
           <HeaderTitle>Helper</HeaderTitle>
           <HeaderActions>
-            {/* NOVO: Botão de Configuração do IP */}
             <IconButton onPress={() => setConfigVisible(true)}>
               <Icon name="settings-outline" size={20} color="#FFFFFF" />
             </IconButton>
 
-            {debug && (
+            {DEBUG && (
               <IconButton onPress={() => navigation.navigate('Lab')}>
-                <Icon name="construct-outline" size={20} color="#7c4dff" />
+                <Icon name="construct-outline" size={20} color="#7C4DFF" />
               </IconButton>
             )}
 
@@ -214,89 +332,77 @@ export default function HomeScreen({ navigation }) {
         <FlatList
           data={apps}
           keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingBottom: insets.bottom + 100,
-            paddingTop: 8,
+            paddingBottom: insets.bottom + 90,
+            paddingTop: 12,
           }}
-          renderItem={({ item }) => (
-            <Card>
-              <CardTouchable
-                onPress={() =>
-                  navigation.navigate('WebView', {
-                    url: item.url,
-                    htmlLocal: item.htmlLocal,
-                    appId: item.id,
-                  })
-                }
-              >
-                <CardIconContainer>
-                  <Icon name="cube-outline" size={22} color="#7c4dff" />
-                </CardIconContainer>
-                <CardInfo>
-                  <CardText numberOfLines={1}>{item.label}</CardText>
-                  <CardSubtext numberOfLines={1}>{item.url}</CardSubtext>
-                </CardInfo>
-              </CardTouchable>
-              <DeleteButton onPress={() => deleteApp(item.id)}>
-                <Icon name="trash-outline" size={18} color="#FF4D4D" />
-              </DeleteButton>
-            </Card>
-          )}
+          renderItem={renderAppItem}
           ListEmptyComponent={
             <EmptyContainer>
-              <Icon name="layers-outline" size={48} color="#22222A" />
-              <EmptyText>Nenhum Modulo importado ainda.</EmptyText>
+              <Icon name="layers-outline" size={48} color="#262632" />
+              <EmptyTitle>Nenhum módulo instalado</EmptyTitle>
+              <EmptyText>
+                Adicione um módulo (.zip) ou um site pela URL, ou escolha algo
+                no Marketplace.
+              </EmptyText>
             </EmptyContainer>
           }
         />
 
         <Fab
-          style={{ bottom: insets.bottom + 24 }}
-          onPress={() => setModalVisible(true)}
-        >
-          <Icon name="add" size={28} color="#FFFFFF" />
+          style={{bottom: insets.bottom + 24}}
+          onPress={() => setModalVisible(true)}>
+          <Icon name="add" size={30} color="#FFFFFF" />
         </Fab>
 
-        <Modal visible={modalVisible} animationType="slide" transparent>
+        {/* Modal Adicionar Módulo ou Site */}
+        <Modal visible={modalVisible} animationType="fade" transparent>
           <ModalOverlay behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ModalContent>
               <ModalHeader>
-                <ModalTitle>Adicionar Modulo</ModalTitle>
-                <TouchableOpacity onPress={closeModal}>
+                <ModalTitle>Adicionar Módulo ou Site</ModalTitle>
+                <ModalCloseButton onPress={closeModal}>
                   <Icon name="close" size={24} color="#707080" />
-                </TouchableOpacity>
+                </ModalCloseButton>
               </ModalHeader>
 
               <StyledInput
                 value={newLabel}
                 onChangeText={setNewLabel}
-                placeholder="Nome do App"
+                placeholder="Nome (opcional)"
                 placeholderTextColor="#555565"
               />
               <StyledInput
                 value={newUrl}
                 onChangeText={setNewUrl}
-                placeholder="Ex: 192.168.1.102:3000"
+                placeholder="URL do .zip ou site (ex: 192.168.1.102:3000)"
                 placeholderTextColor="#555565"
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
+                editable={!installing}
               />
-              <PrimaryButton onPress={addApp}>
-                <ButtonText>Confirmar e Instalar</ButtonText>
+              <PrimaryButton onPress={addApp} disabled={installing}>
+                {installing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <ButtonText>Adicionar</ButtonText>
+                )}
               </PrimaryButton>
             </ModalContent>
           </ModalOverlay>
         </Modal>
 
-        <Modal visible={configVisible} animationType="slide" transparent>
+        {/* Modal Configuração de IP com Histórico */}
+        <Modal visible={configVisible} animationType="fade" transparent>
           <ModalOverlay behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ModalContent>
               <ModalHeader>
                 <ModalTitle>Configurar Marketplace</ModalTitle>
-                <TouchableOpacity onPress={() => setConfigVisible(false)}>
+                <ModalCloseButton onPress={() => setConfigVisible(false)}>
                   <Icon name="close" size={24} color="#707080" />
-                </TouchableOpacity>
+                </ModalCloseButton>
               </ModalHeader>
 
               <StyledInput
@@ -308,6 +414,23 @@ export default function HomeScreen({ navigation }) {
                 autoCorrect={false}
                 keyboardType="url"
               />
+
+              {ipHistory.length > 0 && (
+                <View style={{marginBottom: 16, marginTop: 4}}>
+                  <IpHistoryLabel>IPs Recentes</IpHistoryLabel>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled">
+                    {ipHistory.map(ip => (
+                      <IpBadge key={ip} onPress={() => setMarketplaceIp(ip)}>
+                        <IpBadgeText>{ip}</IpBadgeText>
+                      </IpBadge>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
               <PrimaryButton onPress={saveMarketplaceIp}>
                 <ButtonText>Salvar Endereço</ButtonText>
               </PrimaryButton>
@@ -315,6 +438,15 @@ export default function HomeScreen({ navigation }) {
           </ModalOverlay>
         </Modal>
 
+        {/* Modal de Configuração de Permissões */}
+        <ModuleSettingsModal
+          visible={selectedAppForModal !== null}
+          app={selectedAppForModal}
+          onClose={() => setSelectedAppForModal(null)}
+          onReinstall={reinstallApp}
+          onDelete={deleteApp}
+          isReinstalling={reinstallingId === selectedAppForModal?.id}
+        />
         <MarketplaceModal
           visible={marketplaceVisible}
           onClose={() => setMarketplaceVisible(false)}

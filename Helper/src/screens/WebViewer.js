@@ -1,16 +1,11 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  DeviceEventEmitter,
-  BackHandler,
-  Platform,
-} from 'react-native';
-import { WebView } from 'react-native-webview';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import React, {useRef, useState, useEffect, useCallback} from 'react';
+import {DeviceEventEmitter, BackHandler, StatusBar} from 'react-native';
+import {WebView} from 'react-native-webview';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useFocusEffect} from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
-import { handleBridgeMessage } from '../bridges';
+import {handleBridgeMessage} from '../bridges';
 
 // Bridges
 import CameraBridge from '../bridges/Camera';
@@ -23,18 +18,24 @@ import ConsoleBridge from '../bridges/Console';
 
 import downloadUpdateCode from '../Services/Helper';
 
-export default function WebViewScreen({ route, navigation }) {
-  const { url, htmlLocal, appId } = route.params;
+import {
+  Container,
+  TopBar,
+  IconButton,
+  TopBarTitle,
+  WebViewContainer,
+} from './styles';
+
+export default function WebViewScreen({route, navigation}) {
+  const {url, htmlLocal, appId} = route.params;
   const insets = useSafeAreaInsets();
   const webviewRef = useRef(null);
 
-  // Estado para controlar se a WebView pode voltar internamente
   const [canGoBack, setCanGoBack] = useState(false);
 
-  // Define a fonte inicial: prioriza o HTML local se existir, senão carrega a URL diretamente
   const [displaySource, setDisplaySource] = useState(() => {
-    if (htmlLocal) return { html: htmlLocal, baseUrl: url };
-    return { uri: url.startsWith('http') ? url : `http://${url}` };
+    if (htmlLocal) return {html: htmlLocal, baseUrl: url};
+    return {uri: url.startsWith('http') ? url : `https://${url}`};
   });
 
   const bridgeRefs = {
@@ -47,31 +48,22 @@ export default function WebViewScreen({ route, navigation }) {
     console: useRef(null),
   };
 
-  // Intercepta o botão voltar nativo do Android com a assinatura correta de remoção
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
         if (canGoBack && webviewRef.current) {
           webviewRef.current.goBack();
-          return true; // Bloqueia a ação de fechar a tela
+          return true;
         }
-        return false; // Permite voltar para a Home
+        return false;
       };
 
-      // Adiciona o listener
       const subscription = BackHandler.addEventListener(
         'hardwareBackPress',
         onBackPress,
       );
 
-      // Retorna a função de limpeza padrão corrigida
-      return () => {
-        if (subscription && typeof subscription.remove === 'function') {
-          subscription.remove();
-        } else {
-          BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-        }
-      };
+      return () => subscription.remove();
     }, [canGoBack]),
   );
 
@@ -80,22 +72,15 @@ export default function WebViewScreen({ route, navigation }) {
     const sourceCancel = axios.CancelToken.source();
 
     const checkAndFetchUpdate = async () => {
-      // Se for um arquivo local extraído do Marketplace, não precisa validar rede externa
       if (url.startsWith('file://')) {
-        setDisplaySource({ uri: url }); // Aponta direto para o arquivo local
+        setDisplaySource({uri: url});
         return;
       }
 
-      const targetUrl =
-        url.startsWith('http://') || url.startsWith('https://')
-          ? url
-          : `http://${url}`;
+      const targetUrl = url.startsWith('http') ? url : `https://${url}`;
 
       try {
-        // Validação do Axios para IPs/Servidores externos...
-        await axios({
-          method: 'HEAD',
-          url: targetUrl,
+        await axios.head(targetUrl, {
           timeout: 3000,
           cancelToken: sourceCancel.token,
           validateStatus: () => true,
@@ -103,7 +88,7 @@ export default function WebViewScreen({ route, navigation }) {
 
         const novoHtml = await downloadUpdateCode(targetUrl);
         if (isMounted && novoHtml && novoHtml !== htmlLocal) {
-          setDisplaySource({ html: novoHtml, baseUrl: targetUrl });
+          setDisplaySource({html: novoHtml, baseUrl: targetUrl});
           DeviceEventEmitter.emit('UPDATE_APP_CACHE', {
             id: appId,
             html: novoHtml,
@@ -111,7 +96,7 @@ export default function WebViewScreen({ route, navigation }) {
         }
       } catch (error) {
         if (axios.isCancel(error)) return;
-        console.log(`[WebView] Usando versão em cache local estável.`);
+        console.log('[WebView] Usando versão em cache local estável.');
       }
     };
 
@@ -126,61 +111,86 @@ export default function WebViewScreen({ route, navigation }) {
     webviewRef.current?.postMessage(JSON.stringify(payload));
   };
 
-  // Atualiza o estado de navegação interna da WebView
-  const handleNavigationStateChange = navState => {
-    setCanGoBack(navState.canGoBack);
+  // --- VALIDAÇÃO DE ORIGEM DAS MENSAGENS ---
+  const handleMessage = event => {
+    const originUrl = event.nativeEvent.url;
+
+    // Permite origens locais, HTML injetado direto (null / string vazia / about:blank) ou arquivos locais
+    const isLocalOrigin =
+      !originUrl ||
+      originUrl === 'null' ||
+      originUrl === 'about:blank' ||
+      originUrl.startsWith('file://');
+
+    if (!isLocalOrigin) {
+      const allowedTarget = url.startsWith('http') ? url : `https://${url}`;
+
+      if (!originUrl.startsWith(allowedTarget)) {
+        console.warn(
+          `[Security:BLOCKED] Mensagem rejeitada da origem não autorizada: ${originUrl}`,
+        );
+        return;
+      }
+    }
+
+    handleBridgeMessage(event, bridgeRefs, sendToWebView, {appId});
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
-        },
-      ]}
-    >
-      {/* Bridges de Hardware/Nativo */}
+    <Container>
+      <StatusBar barStyle="light-content" backgroundColor="#121216" />
+
+      <TopBar style={{paddingTop: insets.top}}>
+        <IconButton
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+          onPress={() => {
+            if (canGoBack && webviewRef.current) {
+              webviewRef.current.goBack();
+            } else {
+              navigation.goBack();
+            }
+          }}>
+          <Icon name="arrow-back" size={18} color="#EDEDF2" />
+        </IconButton>
+
+        <TopBarTitle numberOfLines={1}>{appId || url}</TopBarTitle>
+
+        <IconButton
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+          onPress={() => navigation.goBack()}>
+          <Icon name="close" size={18} color="#8C8C9E" />
+        </IconButton>
+      </TopBar>
+
       <CameraBridge ref={bridgeRefs.camera} sendToWebView={sendToWebView} />
       <SensorBridge ref={bridgeRefs.sensors} sendToWebView={sendToWebView} />
       <FileBridge ref={bridgeRefs.file} sendToWebView={sendToWebView} />
       <MicrophoneBridge ref={bridgeRefs.mic} sendToWebView={sendToWebView} />
       <LocationBridge ref={bridgeRefs.location} sendToWebView={sendToWebView} />
-      <StorageBridge ref={bridgeRefs.storage} sendToWebView={sendToWebView} />
+      <StorageBridge
+        ref={bridgeRefs.storage}
+        sendToWebView={sendToWebView}
+        appId={appId}
+      />
       <ConsoleBridge ref={bridgeRefs.console} sendToWebView={sendToWebView} />
 
-      <View style={styles.webviewContainer}>
+      <WebViewContainer style={{paddingBottom: insets.bottom}}>
         <WebView
           ref={webviewRef}
           source={displaySource}
-          onMessage={event =>
-            handleBridgeMessage(event, bridgeRefs, sendToWebView)
-          }
-          onNavigationStateChange={handleNavigationStateChange}
+          onMessage={handleMessage}
+          onNavigationStateChange={navState => setCanGoBack(navState.canGoBack)}
           javaScriptEnabled
           domStorageEnabled
-          allowFileAccess
-          allowUniversalAccessFromFileURLs
-          originWhitelist={['*']}
-          mixedContentMode="always"
-          style={styles.webview}
+          allowFileAccess={true}
+          allowUniversalAccessFromFileURLs={false}
+          allowFileAccessFromFileURLs={false}
+          originWhitelist={['https://*', 'file://*']}
+          mixedContentMode="never"
+          javaScriptCanOpenWindowsAutomatically={false}
+          style={{flex: 1, backgroundColor: 'transparent'}}
         />
-      </View>
-    </View>
+      </WebViewContainer>
+    </Container>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0A0A0C',
-  },
-  webviewContainer: {
-    flex: 1,
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-});

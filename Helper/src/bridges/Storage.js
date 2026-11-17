@@ -1,59 +1,173 @@
-import React, { forwardRef, useImperativeHandle } from 'react';
+import React, {forwardRef, useImperativeHandle} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const StorageBridge = forwardRef(({ sendToWebView }, ref) => {
-  
-  useImperativeHandle(ref, () => ({
-    // Salva um dado (Chave, Valor)
-    async STORAGE_SAVE(params) {
-      try {
-        const { key, value } = params;
-        // Convertemos para string caso venha um objeto/array
-        const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-        await AsyncStorage.setItem(key, stringValue);
-        
-        sendToWebView({ module: 'storage', type: 'SAVE_SUCCESS', key });
-      } catch (err) {
-        sendToWebView({ module: 'storage', type: 'ERROR', message: err.message });
-      }
-    },
+const StorageBridge = forwardRef(({sendToWebView}, ref) => {
+  // Sanitiza o appId e a key para impedir injeção de delimitadores ou traversal
+  const sanitize = str => String(str || '').replace(/[^a-zA-Z0-9_-]/g, '_');
 
-    // Recupera um dado pela chave
-    async STORAGE_GET(params) {
-      try {
-        const { key } = params;
-        const value = await AsyncStorage.getItem(key);
-        
-        sendToWebView({ 
-          module: 'storage', 
-          type: 'STORAGE_DATA', 
-          key, 
-          value: value // A WebView deve dar JSON.parse se necessário
-        });
-      } catch (err) {
-        sendToWebView({ module: 'storage', type: 'ERROR', message: err.message });
-      }
-    },
-
-    // Remove uma chave específica
-    async STORAGE_REMOVE(params) {
-      try {
-        await AsyncStorage.removeItem(params.key);
-        sendToWebView({ module: 'storage', type: 'REMOVE_SUCCESS', key: params.key });
-      } catch (err) {
-        sendToWebView({ module: 'storage', type: 'ERROR', message: err.message });
-      }
-    },
-
-    // Limpa TUDO o que foi salvo pelo app
-    async STORAGE_CLEAR() {
-      try {
-        await AsyncStorage.clear();
-        sendToWebView({ module: 'storage', type: 'CLEAR_SUCCESS' });
-      } catch (err) {
-        sendToWebView({ module: 'storage', type: 'ERROR', message: err.message });
-      }
+  const getScopedKey = (key, rawAppId) => {
+    if (!rawAppId) {
+      throw new Error(
+        'Identificador do aplicativo (appId) não foi fornecido no contexto.',
+      );
     }
+    const safeAppId = sanitize(rawAppId);
+    const safeKey = String(key).replace(/[^a-zA-Z0-9_\.-]/g, '_');
+    return `@app_${safeAppId}:${safeKey}`;
+  };
+
+  const saveItem = async ({key, value}, callbackId, context) => {
+    try {
+      if (!key) throw new Error('O parâmetro "key" é obrigatório.');
+
+      const scopedKey = getScopedKey(key, context?.appId);
+      await AsyncStorage.setItem(scopedKey, JSON.stringify(value));
+
+      sendToWebView({
+        callbackId,
+        module: 'storage',
+        type: 'SAVE_SUCCESS',
+        success: true,
+        key,
+      });
+    } catch (err) {
+      sendToWebView({
+        callbackId,
+        module: 'storage',
+        type: 'ERROR',
+        success: false,
+        error: err.message,
+      });
+    }
+  };
+
+  const getItem = async ({key}, callbackId, context) => {
+    try {
+      if (!key) throw new Error('O parâmetro "key" é obrigatório.');
+
+      const scopedKey = getScopedKey(key, context?.appId);
+      const rawValue = await AsyncStorage.getItem(scopedKey);
+
+      let parsedValue = null;
+      if (rawValue !== null) {
+        try {
+          parsedValue = JSON.parse(rawValue);
+        } catch {
+          parsedValue = rawValue;
+        }
+      }
+
+      sendToWebView({
+        callbackId,
+        module: 'storage',
+        type: 'STORAGE_DATA',
+        success: true,
+        key,
+        value: parsedValue,
+      });
+    } catch (err) {
+      sendToWebView({
+        callbackId,
+        module: 'storage',
+        type: 'ERROR',
+        success: false,
+        error: err.message,
+      });
+    }
+  };
+
+  const removeItem = async ({key}, callbackId, context) => {
+    try {
+      if (!key) throw new Error('O parâmetro "key" é obrigatório.');
+
+      const scopedKey = getScopedKey(key, context?.appId);
+      await AsyncStorage.removeItem(scopedKey);
+
+      sendToWebView({
+        callbackId,
+        module: 'storage',
+        type: 'REMOVE_SUCCESS',
+        success: true,
+        key,
+      });
+    } catch (err) {
+      sendToWebView({
+        callbackId,
+        module: 'storage',
+        type: 'ERROR',
+        success: false,
+        error: err.message,
+      });
+    }
+  };
+
+  const clearStorage = async (callbackId, context) => {
+    try {
+      if (!context?.appId) {
+        throw new Error(
+          'Identificador do aplicativo (appId) não foi fornecido.',
+        );
+      }
+
+      const safeAppId = sanitize(context.appId);
+      const prefix = `@app_${safeAppId}:`;
+
+      const allKeys = await AsyncStorage.getAllKeys();
+      const appKeys = allKeys.filter(k => k.startsWith(prefix));
+
+      if (appKeys.length > 0) {
+        await AsyncStorage.multiRemove(appKeys);
+      }
+
+      sendToWebView({
+        callbackId,
+        module: 'storage',
+        type: 'CLEAR_SUCCESS',
+        success: true,
+      });
+    } catch (err) {
+      sendToWebView({
+        callbackId,
+        module: 'storage',
+        type: 'ERROR',
+        success: false,
+        error: err.message,
+      });
+    }
+  };
+
+  const handleAction = async (payload, context) => {
+    const {action, callbackId, ...params} = payload;
+
+    switch (action) {
+      case 'STORAGE_SAVE':
+        await saveItem(params, callbackId, context);
+        break;
+      case 'STORAGE_GET':
+        await getItem(params, callbackId, context);
+        break;
+      case 'STORAGE_REMOVE':
+        await removeItem(params, callbackId, context);
+        break;
+      case 'STORAGE_CLEAR':
+        await clearStorage(callbackId, context);
+        break;
+      default:
+        if (callbackId) {
+          sendToWebView({
+            callbackId,
+            module: 'storage',
+            type: 'ERROR',
+            success: false,
+            error: `Ação '${action}' não reconhecida no StorageBridge.`,
+          });
+        }
+        break;
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    handleAction,
   }));
 
   return null;

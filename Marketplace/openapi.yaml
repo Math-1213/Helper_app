@@ -1,0 +1,188 @@
+openapi: 3.0.3
+info:
+  title: Helper Marketplace Protocol
+  description: >
+    Contrato de um servidor de Marketplace compatível com o app Helper.
+    Qualquer stack (Flask, Node/Express, ASP.NET, Go...) que implemente
+    estes endpoints é compatível com o app. Veja PROTOCOL.md 
+    para a especificação em prosa, incluindo os requisitos de segurança (seção 6).
+  version: "1.0.0"
+  license:
+    name: MIT
+    url: https://opensource.org
+
+servers:
+  - url: http://localhost:3000
+    description: Servidor de referência rodando localmente
+
+paths:
+  /:
+    get:
+      operationId: healthCheck
+      summary: Health check e descoberta de versão do protocolo
+      responses:
+        "200":
+          description: Servidor ativo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthCheck"
+
+  /apps.json:
+    get:
+      operationId: listApps
+      summary: Lista o catálogo de módulos disponíveis
+      responses:
+        "200":
+          description: Catálogo de módulos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppSummary"
+
+  /apps/{appId}/:
+    get:
+      operationId: getAppIndex
+      summary: Serve o index.html do módulo
+      parameters:
+        - $ref: "#/components/parameters/AppId"
+      responses:
+        "200":
+          description: HTML do módulo
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /apps/{appId}/{filePath}:
+    get:
+      operationId: getAppFile
+      summary: >
+        Serve um arquivo do módulo. Se filePath não existir como arquivo,
+        o servidor deve responder com o index.html do módulo (fallback
+        de roteamento client-side / SPA) em vez de um 404.
+      parameters:
+        - $ref: "#/components/parameters/AppId"
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Caminho relativo dentro da pasta do módulo.
+      responses:
+        "200":
+          description: Arquivo solicitado, ou index.html como fallback
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: O módulo {appId} em si não existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /apps/{appId}/download:
+    get:
+      operationId: downloadApp
+      summary: Baixa o módulo inteiro como .zip
+      parameters:
+        - $ref: "#/components/parameters/AppId"
+      responses:
+        "200":
+          description: Pacote .zip do módulo
+          headers:
+            X-Content-SHA256:
+              description: >
+                SHA-256 do conteúdo do zip. Não é uma assinatura
+                criptográfica, mas permite ao cliente detectar mudanças
+                de conteúdo entre duas consultas.
+              schema:
+                type: string
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  parameters:
+    AppId:
+      name: appId
+      in: path
+      required: true
+      description: Identificador do módulo — mesmo nome da sua pasta em apps/.
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9_-]+$"
+
+  responses:
+    NotFound:
+      description: Módulo não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    HealthCheck:
+      type: object
+      required: [name, protocolVersion, status]
+      properties:
+        name:
+          type: string
+          example: helper-marketplace
+        protocolVersion:
+          type: string
+          example: "1.0"
+        status:
+          type: string
+          example: ok
+
+    AppSummary:
+      type: object
+      required: [id, label, url]
+      properties:
+        id:
+          type: string
+          description: Nome da pasta do módulo.
+          example: Calculadora
+        label:
+          type: string
+          description: Nome de exibição (do manifest.json ou do <title> do index.html).
+          example: Calculadora Científica
+        version:
+          type: string
+          nullable: true
+          example: "1.2.0"
+        description:
+          type: string
+          nullable: true
+        url:
+          type: string
+          format: uri
+          description: URL absoluta de download, refletindo o host da requisição atual.
+          example: http://192.168.1.50:3000/apps/Calculadora/download
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: APP_NOT_FOUND
+            message:
+              type: string
+              example: "Módulo 'Foo' não encontrado."

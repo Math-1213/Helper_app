@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
-import RNFS from 'react-native-fs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import api from '../bridges/Marketplace';
-import { unzip } from 'react-native-zip-archive';
+import {installModuleFromUrl} from '../Services/ModuleInstaller';
 
 export default function MarketplaceModal({
   visible,
@@ -22,6 +22,7 @@ export default function MarketplaceModal({
 }) {
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [downloadingAppId, setDownloadingAppId] = useState(null);
 
   useEffect(() => {
     if (visible) {
@@ -32,112 +33,96 @@ export default function MarketplaceModal({
   const fetchApps = async () => {
     try {
       setLoading(true);
-
-      // Usando apenas o endpoint relativo. O Axios prefixará automaticamente a baseURL salva
-      const response = await api.get("apps.json");
-
-      setApps(response.data);
+      const response = await api.get('apps.json');
+      setApps(response.data || []);
     } catch (err) {
-      console.log('Erro carregando marketplace');
-      console.log('ENDPOINT:', "127.0.0.1:3333");
-      console.log(err.message);
+      console.log('[Marketplace] Erro carregando catálogo:', err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // const installApp = async app => {
-  //   try {
-  //     const folder = `${RNFS.DocumentDirectoryPath}/${app.id}`;
-  //     const filePath = `${folder}/index.html`;
-
-  //     const exists = await RNFS.exists(folder);
-
-  //     if (!exists) {
-  //       await RNFS.mkdir(folder);
-  //     }
-
-  //     const result = await RNFS.downloadFile({
-  //       fromUrl: app.url,
-  //       toFile: filePath,
-  //     }).promise;
-
-  //     if (result.statusCode === 200) {
-  //       const installedApp = {
-  //         id: app.id,
-  //         label: app.label,
-  //         url: `file://${filePath}`,
-  //       };
-
-  //       onInstall(installedApp);
-  //       onClose();
-  //     } else {
-  //       console.log('Download falhou:', result.statusCode);
-  //     }
-  //   } catch (err) {
-  //     console.log('Erro instalando app');
-  //     console.log(err);
-  //   }
-  // };
-
   const installApp = async app => {
+    if (downloadingAppId) return;
+
+    setDownloadingAppId(app.id);
+
     try {
-      const folder = `${RNFS.DocumentDirectoryPath}/${app.id}`;
-      const zipPath = `${folder}.zip`;
+      const installed = await installModuleFromUrl(app.url, app.id);
 
-      console.log(zipPath);
-
-      const exists = await RNFS.exists(folder);
-
-      if (!exists) {
-        await RNFS.mkdir(folder);
-      }
-
-      const result = await RNFS.downloadFile({
-        fromUrl: app.url,
-        toFile: zipPath,
-      }).promise;
-
-      if (result.statusCode === 200) {
-        await unzip(zipPath, folder);
-
-        await RNFS.unlink(zipPath);
-
-        const installedApp = {
-          id: app.id,
-          label: app.label,
-          url: `file://${folder}/index.html`,
-        };
-
-        onInstall(installedApp);
-        onClose();
-      } else {
-        console.log('Download falhou:', result.statusCode);
-      }
+      onInstall({
+        id: app.id,
+        type: 'module',
+        label: app.label,
+        url: installed.url,
+        sourceUrl: app.url,
+        lastUpdate: Date.now(),
+      });
+      onClose();
     } catch (err) {
-      console.log('Erro instalando app');
-      console.log(err);
+      console.log(`[Marketplace] Erro na instalação de ${app.id}:`, err);
+      Alert.alert('Erro ao Instalar', err.message || 'Falha ao baixar módulo.');
+    } finally {
+      setDownloadingAppId(null);
     }
   };
 
   const availableApps = apps.filter(
-    remoteApp => !installedApps.some(localApp => localApp.id === remoteApp.id)
+    remoteApp => !installedApps.some(localApp => localApp.id === remoteApp.id),
   );
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.card} onPress={() => installApp(item)}>
-      <Text style={styles.title}>{item.label}</Text>
-      <Text style={styles.url}>{item.url}</Text>
-    </TouchableOpacity>
-  );
+  const renderItem = ({item}) => {
+    const isDownloading = downloadingAppId === item.id;
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => installApp(item)}
+        disabled={downloadingAppId !== null}
+        activeOpacity={0.7}>
+        <View style={styles.cardIconContainer}>
+          <Icon name="extension" size={24} color="#7C4DFF" />
+        </View>
+
+        <View style={styles.cardTextContainer}>
+          <Text style={styles.title}>{item.label}</Text>
+          {item.description && (
+            <Text style={styles.description} numberOfLines={1}>
+              {item.description}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.actionIconContainer}>
+          {isDownloading ? (
+            <ActivityIndicator size="small" color="#7C4DFF" />
+          ) : (
+            <Icon name="file-download" size={24} color="#444450" />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="fade" transparent>
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.headerRow}>
-            <Text style={styles.header}>Marketplace</Text>
-            <TouchableOpacity onPress={fetchApps} disabled={loading} style={styles.reloadButton}>
+            <View style={styles.headerTitleContainer}>
+              <Icon
+                name="storefront"
+                size={24}
+                color="#FFF"
+                style={styles.headerIcon}
+              />
+              <Text style={styles.header}>Marketplace</Text>
+            </View>
+            <TouchableOpacity
+              onPress={fetchApps}
+              disabled={loading || downloadingAppId !== null}
+              style={styles.reloadButton}
+              activeOpacity={0.7}>
               {loading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
@@ -147,38 +132,61 @@ export default function MarketplaceModal({
           </View>
 
           {loading && apps.length === 0 ? (
-            <></>
+            <ActivityIndicator
+              size="large"
+              color="#7C4DFF"
+              style={{marginVertical: 40}}
+            />
           ) : (
             <FlatList
               data={availableApps}
               keyExtractor={item => item.id}
               renderItem={renderItem}
-              contentContainerStyle={{ paddingBottom: 20 }}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 !loading && (
-                  <Text style={{ color: '#888', textAlign: 'center', marginTop: 20 }}>
-                    Todos os módulos disponíveis já estão instalados!
-                  </Text>
+                  <View style={styles.emptyContainer}>
+                    <Icon
+                      name="check-circle-outline"
+                      size={48}
+                      color="#2E2E38"
+                    />
+                    <Text style={styles.emptyText}>
+                      Todos os módulos disponíveis já estão instalados.
+                    </Text>
+                  </View>
                 )
               }
             />
           )}
 
-          <View style={styles.divider} />
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.manualButton}
+              disabled={downloadingAppId !== null}
+              onPress={() => {
+                onClose();
+                openManualAdd();
+              }}
+              activeOpacity={0.8}>
+              <Icon
+                name="add-link"
+                size={20}
+                color="#FFF"
+                style={styles.buttonIcon}
+              />
+              <Text style={styles.manualText}>Adicionar URL Manual</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.manualButton}
-            onPress={() => {
-              onClose();
-              openManualAdd();
-            }}
-          >
-            <Text style={styles.manualText}>Adicionar App Manualmente</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.closeText}>Fechar</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              disabled={downloadingAppId !== null}
+              activeOpacity={0.7}>
+              <Text style={styles.closeText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -188,75 +196,134 @@ export default function MarketplaceModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'flex-end',
   },
-
   container: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 12,
-    padding: 20,
-    maxHeight: '80%',
+    backgroundColor: '#121216',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '85%',
+    borderTopWidth: 1,
+    borderColor: '#22222a',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -4},
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
   },
-
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    marginBottom: 20,
   },
-
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    marginRight: 10,
+  },
   header: {
     color: '#FFF',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
-
   reloadButton: {
-    padding: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#22222A',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
+  listContent: {
+    paddingBottom: 20,
+  },
   card: {
-    backgroundColor: '#2A2A2A',
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 10,
+    flexDirection: 'row',
+    backgroundColor: '#1C1C24',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2A2A35',
   },
-
+  cardIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(124, 77, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  cardTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   title: {
     color: '#FFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    marginBottom: 4,
   },
-
-  url: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 3,
+  description: {
+    color: '#8A8A9E',
+    fontSize: 13,
   },
-
-  divider: {
-    height: 1,
-    backgroundColor: '#333',
-    marginVertical: 15,
+  actionIconContainer: {
+    paddingLeft: 12,
   },
-
-  manualButton: {
-    backgroundColor: '#6200EE',
-    padding: 12,
-    borderRadius: 6,
+  emptyContainer: {
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
-
+  emptyText: {
+    color: '#555565',
+    textAlign: 'center',
+    marginTop: 16,
+    fontSize: 15,
+    lineHeight: 22,
+    paddingHorizontal: 20,
+  },
+  footer: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderColor: '#22222a',
+    paddingTop: 20,
+  },
+  manualButton: {
+    flexDirection: 'row',
+    backgroundColor: '#7C4DFF',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
   manualText: {
     color: '#FFF',
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '700',
   },
-
+  closeButton: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#1C1C24',
+    alignItems: 'center',
+  },
   closeText: {
-    color: '#AAA',
-    textAlign: 'center',
+    color: '#A0A0B0',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
